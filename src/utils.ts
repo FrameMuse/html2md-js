@@ -69,6 +69,26 @@ const ESCAPE_TABLE = new Uint8Array(128);
   ESCAPE_TABLE[code] = 1
 })
 
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
+const SRC_BUFFER = new Uint8Array(65536)
+const DEST_BUFFER = new Uint8Array(65536 * 2)
+
+export function escapeMarkdownGodMode(text: string): string {
+  const { written: srcLen } = encoder.encodeInto(text, SRC_BUFFER)
+  let destIdx = 0
+  for (let i = 0; i < srcLen; i++) {
+    const byte = SRC_BUFFER[i]
+    if (byte < 128 && ESCAPE_TABLE[byte] === 1) {
+      DEST_BUFFER[destIdx++] = 92
+    }
+    DEST_BUFFER[destIdx++] = byte
+  }
+  return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
+}
+
+new TextEncoder
+
 export function escapeMarkdownSuperFast(text: string): string {
   const len = text.length
   let out = ''
@@ -78,9 +98,11 @@ export function escapeMarkdownSuperFast(text: string): string {
     const code = text.charCodeAt(i)
     if (code < 128 && ESCAPE_TABLE[code] === 1) {
       if (i > lastIndex) {
-        out += text.substring(lastIndex, i)
+        out += text.substring(lastIndex, i) + '\\' + text[i]
+      } else {
+        out += '\\' + text[i]
       }
-      out += '\\' + text[i]
+      
       lastIndex = i + 1
     }
   }
