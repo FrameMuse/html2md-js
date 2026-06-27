@@ -13,10 +13,12 @@ import {
   SkipFlags,
 } from './options.ts'
 
+const ESCAPE_CHARS = new Set(['\\', '*', '_', '[', ']', '#', '+', '-', '!', '`'])
+
 export function escapeMarkdown(text: string): string {
   let out = ''
   for (const c of text) {
-    if ('\\*_[]#+-!`'.includes(c)) out += '\\' + c
+    if (ESCAPE_CHARS.has(c)) out += '\\' + c
     else out += c
   }
   return out
@@ -50,10 +52,11 @@ export function isContainerTag(tag: string): boolean {
 
 export function matchesCodeBy(elem: Element, rules: CodeByRule[]): boolean {
   const tag = elem.localName
-  const cls = elem.getAttribute('class')
+  const rawCls = elem.getAttribute('class')
+  const classes = rawCls ? rawCls.split(/\s+/) : null
   return rules.some(r => {
     if (r.tag && tag !== r.tag) return false
-    if (r.class && (!cls || !cls.split(/\s+/).includes(r.class))) return false
+    if (r.class && (!classes || !classes.includes(r.class))) return false
     return true
   })
 }
@@ -85,12 +88,21 @@ export function ensureParser(): HtmlParser {
   return _parseHtml
 }
 
+const ADMONITION_MAP: Record<string, string> = {
+  'theme-admonition-note': 'NOTE',
+  'theme-admonition-info': 'NOTE',
+  'theme-admonition-tip': 'TIP',
+  'theme-admonition-important': 'IMPORTANT',
+  'theme-admonition-warning': 'WARNING',
+  'theme-admonition-danger': 'CAUTION',
+  'theme-admonition-caution': 'CAUTION',
+}
+
 export function admonitionType(cls: string): string | null {
-  if (cls.includes('theme-admonition-note') || cls.includes('theme-admonition-info')) return 'NOTE'
-  if (cls.includes('theme-admonition-tip')) return 'TIP'
-  if (cls.includes('theme-admonition-important')) return 'IMPORTANT'
-  if (cls.includes('theme-admonition-warning')) return 'WARNING'
-  if (cls.includes('theme-admonition-danger') || cls.includes('theme-admonition-caution')) return 'CAUTION'
+  for (const token of cls.split(/\s+/)) {
+    const mapped = ADMONITION_MAP[token]
+    if (mapped) return mapped
+  }
   return null
 }
 
@@ -187,19 +199,18 @@ export function flushPendingInline(blocks: Block[], pending: Inline[] | null) {
 }
 
 export function collapseTrim(s: string): string {
-  let bytes = [...s]
-  let start = 0, end = bytes.length
-  while (start < end && bytes[start] === '\n') start++
-  while (end > start && bytes[end - 1] === '\n') end--
+  let start = 0, end = s.length
+  while (start < end && s[start] === '\n') start++
+  while (end > start && s[end - 1] === '\n') end--
   let out: string[] = []
   let newlineCount = 0
   for (let i = start; i < end; i++) {
-    if (bytes[i] === '\n') {
+    if (s[i] === '\n') {
       newlineCount++
       if (newlineCount <= 2) out.push('\n')
     } else {
       newlineCount = 0
-      out.push(bytes[i])
+      out.push(s[i])
     }
   }
   return out.join('')

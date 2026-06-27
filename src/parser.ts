@@ -1,13 +1,9 @@
-import type { Context, Block, Inline, ListItem, ResolvedOptions } from './options.ts'
+import type { Context, Block, Inline, ListItem } from './options.ts'
 import {
   ELEMENT_NODE,
   TEXT_NODE,
   SkipFlags,
   BLOCK_TAGS,
-  SKIP_TAGS,
-  CONTAINER_TAGS,
-  makeCtx,
-  resolveOptions,
 } from './options.ts'
 import {
   escapeMarkdown,
@@ -16,7 +12,6 @@ import {
   isSkipTag,
   isContainerTag,
   matchesCodeBy,
-  ensureParser,
   admonitionType,
   blockParagraph,
   blockBlockQuote,
@@ -387,7 +382,10 @@ function convertCodeByElement(elem: Element, ctx: Context): Block[] {
 function convertChildren(elem: Element, ctx: Context): Block[] {
   const blocks: Block[] = []
   for (const child of elem.childNodes) {
-    blocks.push(...convertNode(child, ctx))
+    const converted = convertNode(child, ctx)
+    for (let i = 0; i < converted.length; i++) {
+      blocks.push(converted[i])
+    }
   }
   return blocks
 }
@@ -463,12 +461,12 @@ function convertTable(elem: Element, ctx: Context): Block[] {
     const t = child.localName
     if (t === 'thead') {
       for (const tr of child.children) {
-        if (tr.localName === 'tr') readRow(tr, true, headers, rows)
+        if (tr.localName === 'tr') readRow(tr, headers, rows, ctx)
         break
       }
     } else if (t === 'tbody') {
       for (const tr of child.children) {
-        if (tr.localName === 'tr') readRow(tr, false, headers, rows)
+        if (tr.localName === 'tr') readRow(tr, headers, rows, ctx)
       }
     } else if (t === 'tr') {
       directTrs.push(child)
@@ -476,7 +474,7 @@ function convertTable(elem: Element, ctx: Context): Block[] {
   }
 
   for (const tr of directTrs) {
-    readRow(tr, headers.length === 0, headers, rows)
+    readRow(tr, headers, rows, ctx)
   }
 
   // If no headers, promote first row
@@ -489,13 +487,13 @@ function convertTable(elem: Element, ctx: Context): Block[] {
   return [{ type: 'table', headers, rows }]
 }
 
-function readRow(tr: Element, _isHeader: boolean, headers: Inline[][], rows: Inline[][][]): void {
+function readRow(tr: Element, headers: Inline[][], rows: Inline[][][], ctx: Context): void {
   const row: Inline[][] = []
   let hadHeader = false
   for (const cell of tr.children) {
     const t = cell.localName
-    if (t === 'th') { hadHeader = true; row.push(collectInlines(cell, makeCtx(resolveOptions()))) }
-    else if (t === 'td') { row.push(collectInlines(cell, makeCtx(resolveOptions()))) }
+    if (t === 'th') { hadHeader = true; row.push(collectInlines(cell, ctx)) }
+    else if (t === 'td') { row.push(collectInlines(cell, ctx)) }
   }
   if (!row.length) return
   if (hadHeader && !headers.length) {
