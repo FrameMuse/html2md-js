@@ -4,6 +4,9 @@ import {
   type ListItem,
   type ResolvedOptions,
   type CodeByRule,
+  type ElementLike,
+  type NodeLike,
+  type TextLike,
   BLOCK_TAGS,
   SKIP_TAGS,
   CONTAINER_TAGS,
@@ -48,9 +51,9 @@ export function isContainerTag(tag: string): boolean {
   return CONTAINER_TAGS.has(tag)
 }
 
-export function matchesCodeBy(elem: Element, rules: CodeByRule[]): boolean {
+export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {
   const tag = elem.localName
-  const rawCls = elem.getAttribute('class')
+  const rawCls = elem.getAttribute?.('class')
   const classes = rawCls ? rawCls.split(/\s+/) : null
   return rules.some(r => {
     if (r.tag && tag !== r.tag) return false
@@ -77,20 +80,20 @@ export function admonitionType(cls: string): string | null {
   return null
 }
 
-export function hasBlockChildren(elem: Element): boolean {
+export function hasBlockChildren(elem: ElementLike): boolean {
   for (const child of elem.children) {
     if (isBlockTag(child.localName)) return true
   }
   return false
 }
 
-export function getTextContent(node: Node): string {
-  if (node.nodeType === TEXT_NODE) return (node as Text).textContent ?? ''
+export function getTextContent(node: NodeLike): string {
+  if (node.nodeType === TEXT_NODE) return (node as TextLike).textContent ?? ''
   let out = ''
-  for (const child of (node as Element).childNodes) {
-    if (child.nodeType === TEXT_NODE) out += (child as Text).textContent ?? ''
+  for (const child of (node as ElementLike).childNodes) {
+    if (child.nodeType === TEXT_NODE) out += (child as TextLike).textContent ?? ''
     else if (child.nodeType === ELEMENT_NODE) {
-      const el = child as Element
+      const el = child as ElementLike
       if (el.localName === 'br') out += '\n'
       else out += getTextContent(el)
     }
@@ -98,7 +101,7 @@ export function getTextContent(node: Node): string {
   return out
 }
 
-export function hasLinkChildren(elem: Element): boolean {
+export function hasLinkChildren(elem: ElementLike): boolean {
   for (const child of elem.children) {
     if (child.localName === 'a') return true
     if (hasLinkChildren(child)) return true
@@ -136,20 +139,20 @@ export function isBlockBlank(block: Block): boolean {
   }
 }
 
-export function findChild(elem: Element, tag: string): Element | null {
+export function findChild(elem: ElementLike, tag: string): ElementLike | null {
   for (const child of elem.children) {
     if (child.localName === tag) return child
   }
   return null
 }
 
-export function getCodeText(elem: Element): string {
+export function getCodeText(elem: ElementLike): string {
   let out = ''
   for (const child of elem.childNodes) {
     if (child.nodeType === TEXT_NODE) {
-      out += (child as Text).textContent ?? ''
+      out += (child as TextLike).textContent ?? ''
     } else if (child.nodeType === ELEMENT_NODE) {
-      const el = child as Element
+      const el = child as ElementLike
       if (el.localName === 'br') out += '\n'
       else out += getCodeText(el)
     }
@@ -157,8 +160,8 @@ export function getCodeText(elem: Element): string {
   return out
 }
 
-export function extractLanguage(elem: Element): string | undefined {
-  const cls = elem.getAttribute('class') ?? ''
+export function extractLanguage(elem: ElementLike): string | undefined {
+  const cls = elem.getAttribute?.('class') ?? ''
   const lang = cls.split(/\s+/).find(s => s.startsWith('language-'))
   return lang ? lang.slice(9) : undefined
 }

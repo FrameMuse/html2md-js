@@ -1,4 +1,4 @@
-import type { Context, Block, Inline, ListItem } from './options.ts'
+import type { Context, Block, Inline, ListItem, ElementLike, NodeLike, TextLike } from './options.ts'
 import {
   ELEMENT_NODE,
   TEXT_NODE,
@@ -30,11 +30,11 @@ import {
 
 // ---- admonition detection ----
 
-function convertAdmonition(elem: Element, atype: string, ctx: Context): Block[] {
+function convertAdmonition(elem: ElementLike, atype: string, ctx: Context): Block[] {
   let contentChildren: Block[] = []
   for (const child of elem.children) {
     if (child.localName === 'div') {
-      const c = child.getAttribute('class') ?? ''
+      const c = child.getAttribute?.('class') ?? ''
       if (c.includes('admonitionContent')) {
         for (const gc of child.childNodes) {
           const blocks = convertNode(gc, ctx)
@@ -51,15 +51,15 @@ function convertAdmonition(elem: Element, atype: string, ctx: Context): Block[] 
 
 // ---- language propagation ----
 
-function propagateLanguage(pre: Element): void {
-  const preClass = pre.getAttribute('class') ?? ''
+function propagateLanguage(pre: ElementLike): void {
+  const preClass = pre.getAttribute?.('class') ?? ''
   const lang = preClass.split(/\s+/).find(s => s.startsWith('language-'))
   if (!lang) return
   for (const child of pre.children) {
     if (child.localName === 'code') {
-      const existing = child.getAttribute('class') ?? ''
+      const existing = child.getAttribute?.('class') ?? ''
       if (!existing.split(/\s+/).includes(lang)) {
-        child.setAttribute('class', existing ? `${existing} ${lang}` : lang)
+        child.setAttribute?.('class', existing ? `${existing} ${lang}` : lang)
       }
     }
   }
@@ -69,22 +69,22 @@ function propagateLanguage(pre: Element): void {
 
 type InlineResult = Inline[]
 
-function collectInlines(node: Node, ctx: Context): InlineResult {
+function collectInlines(node: NodeLike, ctx: Context): InlineResult {
   const result: Inline[] = []
   for (const child of node.childNodes) {
     if (child.nodeType === TEXT_NODE) {
-      const text = (child as Text).textContent ?? ''
+      const text = (child as TextLike).textContent ?? ''
       const collapsed = collapseWhitespace(text)
       if (collapsed) result.push({ type: 'text', text: escapeMarkdown(collapsed) })
     } else if (child.nodeType === ELEMENT_NODE) {
-      const inline = convertInline(child as Element, ctx)
+      const inline = convertInline(child as ElementLike, ctx)
       if (inline) result.push(...inline)
     }
   }
   return result
 }
 
-function collectInlinesWithCodeSplit(node: Node, ctx: Context): InlineResult {
+function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context): InlineResult {
   const result: Inline[] = []
   let buf = ''
   function flush() {
@@ -92,13 +92,13 @@ function collectInlinesWithCodeSplit(node: Node, ctx: Context): InlineResult {
   }
   for (const child of node.childNodes) {
     if (child.nodeType === TEXT_NODE) {
-      buf += (child as Text).textContent ?? ''
+      buf += (child as TextLike).textContent ?? ''
     } else if (child.nodeType === ELEMENT_NODE) {
-      const el = child as Element
+      const el = child as ElementLike
       if (el.localName === 'a') {
         flush()
-        const href = el.getAttribute('href') ?? ''
-        const title = el.getAttribute('title') ?? undefined
+        const href = el.getAttribute?.('href') ?? ''
+        const title = el.getAttribute?.('title') ?? undefined
         const content = collectInlines(el, ctx)
         result.push({ type: 'link', children: content, url: href, title })
       } else if (el.localName === 'br') {
@@ -114,10 +114,10 @@ function collectInlinesWithCodeSplit(node: Node, ctx: Context): InlineResult {
   return result
 }
 
-function convertInline(elem: Element, ctx: Context): InlineResult | null {
+function convertInline(elem: ElementLike, ctx: Context): InlineResult | null {
   const tag = elem.localName
 
-  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute('aria-hidden') === 'true') return null
+  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return null
 
   if (tag === 'strong' || tag === 'b') {
     const inner = collectInlines(elem, ctx)
@@ -146,8 +146,8 @@ function convertInline(elem: Element, ctx: Context): InlineResult | null {
   }
 
   if (tag === 'a') {
-    const href = elem.getAttribute('href') ?? ''
-    const title = elem.getAttribute('title') ?? undefined
+    const href = elem.getAttribute?.('href') ?? ''
+    const title = elem.getAttribute?.('title') ?? undefined
     const content = collectInlines(elem, ctx)
     if (content.every(i => isInlineBlank(i))) return null
     if (!href && !title) {
@@ -157,10 +157,10 @@ function convertInline(elem: Element, ctx: Context): InlineResult | null {
   }
 
   if (tag === 'img') {
-    const src = elem.getAttribute('src') ?? ''
+    const src = elem.getAttribute?.('src') ?? ''
     if (!src) return null
-    const alt = elem.getAttribute('alt') ?? ''
-    const title = elem.getAttribute('title') ?? undefined
+    const alt = elem.getAttribute?.('alt') ?? ''
+    const title = elem.getAttribute?.('title') ?? undefined
     return [{ type: 'image', alt, url: src, title }]
   }
 
@@ -185,7 +185,7 @@ function convertInline(elem: Element, ctx: Context): InlineResult | null {
   }
 
   if (tag === 'ol') {
-    const start = parseInt(elem.getAttribute('start') ?? '1', 10)
+    const start = parseInt(elem.getAttribute?.('start') ?? '1', 10)
     return collectOrderedListInlines(elem, start, ctx)
   }
 
@@ -197,7 +197,7 @@ function convertInline(elem: Element, ctx: Context): InlineResult | null {
   return collectInlines(elem, ctx)
 }
 
-function collectListInlines(elem: Element, marker: string, ctx: Context): Inline[] {
+function collectListInlines(elem: ElementLike, marker: string, ctx: Context): Inline[] {
   const result: Inline[] = []
   for (const li of elem.children) {
     if (li.localName !== 'li') continue
@@ -209,7 +209,7 @@ function collectListInlines(elem: Element, marker: string, ctx: Context): Inline
   return result
 }
 
-function collectOrderedListInlines(elem: Element, start: number, ctx: Context): Inline[] {
+function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Context): Inline[] {
   const result: Inline[] = []
   let n = start
   for (const li of elem.children) {
@@ -225,25 +225,25 @@ function collectOrderedListInlines(elem: Element, start: number, ctx: Context): 
 
 // ---- block conversion ----
 
-function convertNode(node: Node, ctx: Context): Block[] {
+function convertNode(node: NodeLike, ctx: Context): Block[] {
   if (node.nodeType === TEXT_NODE) {
-    const text = (node as Text).textContent ?? ''
+    const text = (node as TextLike).textContent ?? ''
     if (!text.trim()) return []
     const inlines: Inline[] = [{ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) }]
     return [blockParagraph(inlines)]
   }
   if (node.nodeType === ELEMENT_NODE) {
-    return convertElement(node as Element, ctx)
+    return convertElement(node as ElementLike, ctx)
   }
   return []
 }
 
-function convertElement(elem: Element, ctx: Context): Block[] {
+function convertElement(elem: ElementLike, ctx: Context): Block[] {
   const tag = elem.localName
 
   if (isSkipTag(tag)) return []
 
-  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute('aria-hidden') === 'true') return []
+  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return []
 
   const SKIP_TAG_FLAGS: Record<string, number> = {
     header: SkipFlags.HEADER,
@@ -262,7 +262,7 @@ function convertElement(elem: Element, ctx: Context): Block[] {
 
   // admonition
   if (tag === 'div') {
-    const cls = elem.getAttribute('class') ?? ''
+    const cls = elem.getAttribute?.('class') ?? ''
     const atype = admonitionType(cls)
     if (atype) return convertAdmonition(elem, atype, ctx)
   }
@@ -294,7 +294,7 @@ function convertElement(elem: Element, ctx: Context): Block[] {
     }
 
     case 'ol': {
-      const startStr = elem.getAttribute('start')
+      const startStr = elem.getAttribute?.('start')
       const start = startStr ? parseInt(startStr, 10) : 1
       const items = collectListItems(elem, ctx)
       if (!items.length) return []
@@ -357,7 +357,7 @@ function convertElement(elem: Element, ctx: Context): Block[] {
   return convertChildren(elem, ctx)
 }
 
-function convertCodeByElement(elem: Element, ctx: Context): Block[] {
+function convertCodeByElement(elem: ElementLike, ctx: Context): Block[] {
   const tag = elem.localName
 
   if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
@@ -379,7 +379,7 @@ function convertCodeByElement(elem: Element, ctx: Context): Block[] {
   return [blockParagraph(inlines)]
 }
 
-function convertChildren(elem: Element, ctx: Context): Block[] {
+function convertChildren(elem: ElementLike, ctx: Context): Block[] {
   const blocks: Block[] = []
   for (const child of elem.childNodes) {
     const converted = convertNode(child, ctx)
@@ -392,7 +392,7 @@ function convertChildren(elem: Element, ctx: Context): Block[] {
 
 // ---- lists ----
 
-function collectListItems(elem: Element, ctx: Context): ListItem[] {
+function collectListItems(elem: ElementLike, ctx: Context): ListItem[] {
   const items: ListItem[] = []
   for (const child of elem.children) {
     if (child.localName === 'li') {
@@ -410,17 +410,17 @@ function collectListItems(elem: Element, ctx: Context): ListItem[] {
   return items
 }
 
-function collectContentWithInlineMerge(elem: Element, ctx: Context): Block[] {
+function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[] {
   const blocks: Block[] = []
   let pending: Inline[] | null = null
   for (const child of elem.childNodes) {
     if (child.nodeType === TEXT_NODE) {
-      const text = (child as Text).textContent ?? ''
+      const text = (child as TextLike).textContent ?? ''
       if (!text.trim()) { flushPendingInline(blocks, pending); pending = null; continue }
       if (!pending) pending = []
       pending.push({ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) })
     } else if (child.nodeType === ELEMENT_NODE) {
-      const el = child as Element
+      const el = child as ElementLike
       if (isBlockTag(el.localName) && el.localName !== 'li') {
         flushPendingInline(blocks, pending)
         pending = null
@@ -441,7 +441,7 @@ function collectContentWithInlineMerge(elem: Element, ctx: Context): Block[] {
   return blocks
 }
 
-function hasBlockChildrenExceptLi(elem: Element): boolean {
+function hasBlockChildrenExceptLi(elem: ElementLike): boolean {
   for (const child of elem.children) {
     const t = child.localName
     if (t === 'ul' || t === 'ol') return true
@@ -452,11 +452,11 @@ function hasBlockChildrenExceptLi(elem: Element): boolean {
 
 // ---- tables ----
 
-function convertTable(elem: Element, ctx: Context): Block[] {
+function convertTable(elem: ElementLike, ctx: Context): Block[] {
   const headers: Inline[][] = []
   const rows: Inline[][][] = []
 
-  let directTrs: Element[] = []
+  let directTrs: ElementLike[] = []
   for (const child of elem.children) {
     const t = child.localName
     if (t === 'thead') {
@@ -487,7 +487,7 @@ function convertTable(elem: Element, ctx: Context): Block[] {
   return [{ type: 'table', headers, rows }]
 }
 
-function readRow(tr: Element, headers: Inline[][], rows: Inline[][][], ctx: Context): void {
+function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: Context): void {
   const row: Inline[][] = []
   let hadHeader = false
   for (const cell of tr.children) {

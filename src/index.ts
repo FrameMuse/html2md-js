@@ -1,4 +1,4 @@
-import type { HtmlToMdOptions } from './options.ts'
+import type { HtmlToMdOptions, ElementLike } from './options.ts'
 import {
   HOIST_IMAGES,
   HOIST_LINKS,
@@ -20,7 +20,7 @@ import {
 export { HOIST_IMAGES, HOIST_LINKS, SkipFlags }
 export type { HtmlToMdOptions }
 
-export function htmlToMd(input: Element, options?: HtmlToMdOptions): string {
+export function htmlToMd(input: ElementLike, options?: HtmlToMdOptions): string {
   const opts = resolveOptions(options)
   const ctx = makeCtx(opts)
   const blocks = convertChildren(input, ctx)

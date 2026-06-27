@@ -84,6 +84,24 @@ export interface Context {
 export const ELEMENT_NODE = 1
 export const TEXT_NODE = 3
 
+export interface TextLike {
+  readonly nodeType: number
+  readonly textContent: string | null
+  readonly childNodes: readonly NodeLike[]
+}
+
+export interface ElementLike {
+  readonly nodeType: number
+  readonly textContent: string | null
+  readonly childNodes: readonly NodeLike[]
+  readonly localName: string
+  readonly children: readonly ElementLike[]
+  getAttribute?(name: string): string | null
+  setAttribute?(name: string, value: string): void
+}
+
+export type NodeLike = TextLike | ElementLike
+
 export const BLOCK_TAGS = new Set([
   'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'blockquote', 'pre', 'table',
