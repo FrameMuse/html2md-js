@@ -1,49 +1,58 @@
 $ bun benchmarks/conversion.ts && bun benchmarks/escape.ts && bun benchmarks/internal.ts
 Element input (pre-parsed DOM)
-  [038.994µs] [+2.21x]  page (0.6K)
-  [017.654µs] [fastest] page +full opts
-  [138.753µs] [+7.86x]  prereqs (24.8K)
-  [139.655µs] [+7.91x]  prereqs +full opts
-  [001.276ms] [+72.28x] figma (96.1K)
-  [001.726ms] [+97.75x] figma +full opts
+  [025.443µs] [+1.31x]  page (0.6K)
+  [019.357µs] [fastest] page +full opts
+  [144.684µs] [+7.47x]  prereqs (24.8K)
+  [216.064µs] [+11.16x] prereqs +full opts
+  [001.708ms] [+88.24x] figma (96.1K)
+  [001.397ms] [+72.18x] figma +full opts
 Option breakdown (figma 96.1K)
-  [001.052ms] [fastest] default
-  [001.230ms] [+1.17x]  codeBy only
-  [001.119ms] [+1.06x]  hoist only
-  [001.072ms] [+1.02x]  skip only
+  [001.291ms] [+1.21x]  default
+  [001.106ms] [+1.04x]  codeBy only
+  [001.081ms] [+1.02x]  hoist only
+  [001.064ms] [fastest] skip only
 Synthetic: admonitions x50
-  [340.000ns] [fastest] element
+  [371.000ns] [fastest] element
 Synthetic: 10x10 table
-  [281.000ns] [fastest] element
+  [251.000ns] [fastest] element
 Synthetic: code-by x100
-  [391.000ns] [fastest] element
+  [370.000ns] [fastest] element
 escapeMarkdown: 8 variants  (0% special chars)
-  [081.635µs] [+173.32x] loop (Set.has)
+  [080.097µs] [+170.06x] loop (Set.has)
   [481.000ns] [+1.02x]   regex (.replace)
   [471.000ns] [fastest]  fastRegex (pre-compiled)
-  [001.022µs] [+2.17x]   matchAll (for..of)
-  [481.000ns] [+1.02x]   exec (while loop)
-  [011.862µs] [+25.18x]  superFast (Uint8Array+slice)
-  [014.928µs] [+31.69x]  godMode (TextEncoder+buffer)
+  [001.012µs] [+2.15x]   matchAll (for..of)
+  [491.000ns] [+1.04x]   exec (while loop)
+  [011.692µs] [+24.82x]  superFast (Uint8Array+slice)
+  [014.859µs] [+31.55x]  godMode (TextEncoder+buffer)
   [471.000ns] [fastest]  hybrid (fast-path+encoder)
 escapeMarkdown: 8 variants  (5% special chars)
-  [028.604µs] [+7.23x]  loop (Set.has)
-  [047.721µs] [+12.06x] regex (.replace)
-  [047.460µs] [+11.99x] fastRegex (pre-compiled)
-  [041.840µs] [+10.57x] matchAll (for..of)
-  [033.579µs] [+8.48x]  exec (while loop)
-  [012.304µs] [+3.11x]  superFast (Uint8Array+slice)
-  [003.958µs] [fastest] godMode (TextEncoder+buffer)
-  [005.570µs] [+1.41x]  hybrid (fast-path+encoder)
+  [028.854µs] [+7.08x]  loop (Set.has)
+  [048.431µs] [+11.88x] regex (.replace)
+  [048.793µs] [+11.97x] fastRegex (pre-compiled)
+  [042.531µs] [+10.43x] matchAll (for..of)
+  [034.735µs] [+8.52x]  exec (while loop)
+  [012.364µs] [+3.03x]  superFast (Uint8Array+slice)
+  [005.520µs] [+1.35x]  godMode (TextEncoder+buffer)
+  [004.077µs] [fastest] hybrid (fast-path+encoder)
+escapeMarkdown: 8 variants  (1% special chars)
+  [120.628µs] [+9.65x]  loop (Set.has)
+  [018.155µs] [+1.45x]  regex (.replace)
+  [018.195µs] [+1.46x]  fastRegex (pre-compiled)
+  [014.267µs] [+1.14x]  matchAll (for..of)
+  [012.504µs] [fastest] exec (while loop)
+  [025.218µs] [+2.02x]  superFast (Uint8Array+slice)
+  [025.729µs] [+2.06x]  godMode (TextEncoder+buffer)
+  [018.785µs] [+1.50x]  hybrid (fast-path+encoder)
 escapeMarkdown: 8 variants  (50% special chars)
-  [040.332µs] [+7.62x]  loop (Set.has)
-  [340.947µs] [+64.45x] regex (.replace)
-  [331.839µs] [+62.73x] fastRegex (pre-compiled)
-  [269.496µs] [+50.94x] matchAll (for..of)
-  [229.785µs] [+43.44x] exec (while loop)
-  [016.762µs] [+3.17x]  superFast (Uint8Array+slice)
-  [008.206µs] [+1.55x]  godMode (TextEncoder+buffer)
-  [005.290µs] [fastest] hybrid (fast-path+encoder)
+  [040.452µs] [+7.78x]  loop (Set.has)
+  [331.598µs] [+63.77x] regex (.replace)
+  [330.897µs] [+63.63x] fastRegex (pre-compiled)
+  [251.121µs] [+48.29x] matchAll (for..of)
+  [227.947µs] [+43.84x] exec (while loop)
+  [016.261µs] [+3.13x]  superFast (Uint8Array+slice)
+  [008.336µs] [+1.60x]  godMode (TextEncoder+buffer)
+  [005.200µs] [fastest] hybrid (fast-path+encoder)
 collapseWhitespace / collapseTrim
-  [082.206µs] [fastest] collapseWhitespace
-  [180.833µs] [+2.20x]  collapseTrim
+  [081.474µs] [fastest] collapseWhitespace
+  [168.158µs] [+2.06x]  collapseTrim

@@ -25,7 +25,19 @@ bench("superFast (Uint8Array+slice)", () => { escapeMarkdownSuperFast(mixedText)
 bench("godMode (TextEncoder+buffer)", () => { escapeMarkdownGodMode(mixedText) })
 bench("hybrid (fast-path+encoder)", () => { escapeMarkdownHybrid(mixedText) })
 
-using g3 = bench.group("escapeMarkdown: 8 variants  (50% special chars)")
+using g3 = bench.group("escapeMarkdown: 8 variants  (1% special chars)")
+
+const sparseText = ("a".repeat(99) + "*").repeat(200)
+bench("loop (Set.has)", () => { escapeMarkdown(sparseText) })
+bench("regex (.replace)", () => { escapeMarkdownWithReplace(sparseText) })
+bench("fastRegex (pre-compiled)", () => { escapeMarkdownFastRegex(sparseText) })
+bench("matchAll (for..of)", () => { escapeMarkdownWithMatchAll(sparseText) })
+bench("exec (while loop)", () => { escapeMarkdownWithExec(sparseText) })
+bench("superFast (Uint8Array+slice)", () => { escapeMarkdownSuperFast(sparseText) })
+bench("godMode (TextEncoder+buffer)", () => { escapeMarkdownGodMode(sparseText) })
+bench("hybrid (fast-path+encoder)", () => { escapeMarkdownHybrid(sparseText) })
+
+using g4 = bench.group("escapeMarkdown: 8 variants  (50% special chars)")
 
 const denseText = "\\*_[]#+-!`\\*_[]#+-!`\\*_[]#+-!`\\*_[]#+-!`".repeat(100)
 bench("loop (Set.has)", () => { escapeMarkdown(denseText) })
