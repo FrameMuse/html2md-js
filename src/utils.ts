@@ -13,149 +13,29 @@ import {
   TEXT_NODE
 } from './options'
 
-const ESCAPE_CHARS = new Set(['\\', '*', '_', '[', ']', '#', '+', '-', '!', '`'])
+const _ESCAPE_TEST = /[\\*_`\[\]{}()#+\-\.!]/
+const _ESCAPE_TABLE = new Uint8Array(128);
+[92, 42, 95, 96, 91, 93, 123, 125, 40, 41, 35, 43, 45, 46, 33].forEach(code => {
+  _ESCAPE_TABLE[code] = 1
+})
+const _ENCODER = new TextEncoder()
+const _DECODER = new TextDecoder()
+const _SRC_BUF = new Uint8Array(65536)
+const _DST_BUF = new Uint8Array(65536 * 2)
 
 export function escapeMarkdown(text: string): string {
-  let out = ''
-  for (const c of text) {
-    if (ESCAPE_CHARS.has(c)) out += '\\'
-    out += c
-  }
-  return out
-}
-
-const FAST_REGEX = /([\\*_`\[\]{}()#+\-\.!])/g
-
-export function escapeMarkdownWithReplace(text: string): string {
-  return text.replace(/([\\*_`\[\]{}()#+\-\.!])/g, '\\$1')
-}
-
-export function escapeMarkdownFastRegex(text: string): string {
-  return text.replace(FAST_REGEX, '\\$1')
-}
-
-const ESCAPE_RE = /[\\*_`\[\]{}()#+\-\.!]/g
-
-export function escapeMarkdownWithMatchAll(text: string): string {
-  let out = ''
-  let last = 0
-  for (const match of text.matchAll(ESCAPE_RE)) {
-    out += text.substring(last, match.index)
-    out += '\\'
-    out += match[0]
-    last = match.index + 1
-  }
-  out += text.substring(last)
-  return out
-}
-
-export function escapeMarkdownWithExec(text: string): string {
-  let out = ''
-  let last = 0
-  let match: RegExpExecArray | null
-  ESCAPE_RE.lastIndex = 0
-  while ((match = ESCAPE_RE.exec(text)) !== null) {
-    out += text.substring(last, match.index)
-    out += '\\'
-    out += match[0]
-    last = match.index + 1
-  }
-  out += text.substring(last)
-  return out
-}
-
-const ESCAPE_TABLE = new Uint8Array(128);
-[92, 42, 95, 96, 91, 93, 123, 125, 40, 41, 35, 43, 45, 46, 33].forEach(code => {
-  ESCAPE_TABLE[code] = 1
-})
-
-const encoder = new TextEncoder()
-const decoder = new TextDecoder()
-const SRC_BUFFER = new Uint8Array(65536)
-const DEST_BUFFER = new Uint8Array(65536 * 2)
-
-export function escapeMarkdownGodMode(text: string): string {
-  const { written: srcLen } = encoder.encodeInto(text, SRC_BUFFER)
+  if (!_ESCAPE_TEST.test(text)) return text
+  const encoded = _ENCODER.encodeInto(text, _SRC_BUF)
+  const srcLen = encoded.written
   let destIdx = 0
   for (let i = 0; i < srcLen; i++) {
-    const byte = SRC_BUFFER[i]
-    if (byte < 128 && ESCAPE_TABLE[byte] === 1) {
-      DEST_BUFFER[destIdx++] = 92
+    const byte = _SRC_BUF[i]
+    if (byte < 128 && _ESCAPE_TABLE[byte] === 1) {
+      _DST_BUF[destIdx++] = 92
     }
-    DEST_BUFFER[destIdx++] = byte
+    _DST_BUF[destIdx++] = byte
   }
-  return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
-}
-
-const ESCAPE_TEST = /[\\*_`\[\]{}()#+\-\.!]/
-
-export function escapeMarkdownHybrid(text: string): string {
-  if (!ESCAPE_TEST.test(text)) return text
-  const { written: srcLen } = encoder.encodeInto(text, SRC_BUFFER)
-  let destIdx = 0
-  for (let i = 0; i < srcLen; i++) {
-    const byte = SRC_BUFFER[i]
-    if (byte < 128 && ESCAPE_TABLE[byte] === 1) {
-      DEST_BUFFER[destIdx++] = 92
-    }
-    DEST_BUFFER[destIdx++] = byte
-  }
-  return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
-}
-
-export function escapeMarkdownExecBuffer(text: string): string {
-  const { written: srcLen } = encoder.encodeInto(text, SRC_BUFFER)
-  if (srcLen === 0) return text
-
-  ESCAPE_RE.lastIndex = 0
-  let destIdx = 0
-  let lastByte = 0
-  let match: RegExpExecArray | null
-
-  while ((match = ESCAPE_RE.exec(text)) !== null) {
-    const matchByteOffset = match.index
-    if (matchByteOffset > lastByte) {
-      const segLen = matchByteOffset - lastByte
-      DEST_BUFFER.set(SRC_BUFFER.subarray(lastByte, matchByteOffset), destIdx)
-      destIdx += segLen
-    }
-    DEST_BUFFER[destIdx++] = 92
-    DEST_BUFFER[destIdx++] = SRC_BUFFER[matchByteOffset]
-    lastByte = matchByteOffset + 1
-  }
-
-  if (lastByte < srcLen) {
-    const segLen = srcLen - lastByte
-    DEST_BUFFER.set(SRC_BUFFER.subarray(lastByte, srcLen), destIdx)
-    destIdx += segLen
-  }
-
-  return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
-}
-
-export function escapeMarkdownSuperFast(text: string): string {
-  const len = text.length
-  let out = ''
-  let lastIndex = 0
-
-  for (let i = 0; i < len; i++) {
-    const code = text.charCodeAt(i)
-    if (code < 128 && ESCAPE_TABLE[code] === 1) {
-      if (i > lastIndex) {
-        out += text.substring(lastIndex, i) + '\\' + text[i]
-      } else {
-        out += '\\' + text[i]
-      }
-      
-      lastIndex = i + 1
-    }
-  }
-
-  if (lastIndex < len) {
-    out += text.substring(lastIndex)
-  }
-
-  return out || text
+  return _DECODER.decode(_DST_BUF.subarray(0, destIdx))
 }
 
 export function collapseWhitespace(s: string): string {
