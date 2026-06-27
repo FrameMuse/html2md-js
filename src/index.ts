@@ -816,7 +816,7 @@ function serializeBlockQuote(blocks: Block[], opts: ResolvedOptions, depth: numb
 }
 
 function serializeList(ordered: boolean, start: number, items: ListItem[], opts: ResolvedOptions, depth: number): string {
-  let indent = '    '.repeat(depth)
+  let indent = '  '.repeat(depth)
   let out = ''
   for (let i = 0; i < items.length; i++) {
     out += indent
@@ -833,26 +833,22 @@ function serializeList(ordered: boolean, start: number, items: ListItem[], opts:
   return out
 }
 
-function serializeListItem(item: ListItem, opts: ResolvedOptions, depth: number, prefixLen: number, indent: string): string {
+function serializeListItem(item: ListItem, opts: ResolvedOptions, _depth: number, _prefixLen: number, _indent: string): string {
   let content = ''
   for (let i = 0; i < item.blocks.length; i++) {
     const b = item.blocks[i]
+    const next = i < item.blocks.length - 1 ? item.blocks[i + 1] : null
     if (b.type === 'paragraph') {
       content += serializeInlines(b.content ?? [], opts)
-      if (i < item.blocks.length - 1) content += '\n\n'
+      if (next && next.type === 'list') content += '\n'
+      else if (next) content += '\n\n'
     } else if (b.type === 'list') {
-      content += '\n' + serializeBlock(b, opts, depth)
+      content += serializeBlock(b, opts, _depth)
     } else {
-      content += serializeBlock(b, opts, depth)
+      content += serializeBlock(b, opts, _depth)
     }
   }
-  // indent continuation lines
-  let contIndent = ' '.repeat(prefixLen)
-  let lines = content.split('\n')
-  return lines.map((line, i) => {
-    if (i === 0) return line
-    return indent + contIndent + line
-  }).join('\n') + '\n'
+  return content + '\n'
 }
 
 function serializeCodeBlock(language: string | undefined, code: string, fenced: boolean, opts: ResolvedOptions): string {
