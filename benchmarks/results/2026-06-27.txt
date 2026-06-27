@@ -1,67 +1,64 @@
 $ bun benchmarks/conversion.ts && bun benchmarks/escape.ts && bun benchmarks/internal.ts
 Element input (pre-parsed DOM)
-  [019.662µs] [fastest] page (0.6K)
-  [028.083µs] [+1.43x]  page +full opts
-  [088.336µs] [+4.49x]  prereqs (24.8K)
-  [072.326µs] [+3.68x]  prereqs +full opts
-  [001.404ms] [+71.41x] figma (96.1K)
-  [001.257ms] [+63.92x] figma +full opts
+  [012.834µs] [fastest]  page (0.6K)
+  [018.665µs] [+1.45x]   page +full opts
+  [045.015µs] [+3.51x]   prereqs (24.8K)
+  [042.200µs] [+3.29x]   prereqs +full opts
+  [001.326ms] [+103.30x] figma (96.1K)
+  [808.645µs] [+63.01x]  figma +full opts
 Option breakdown (figma 96.1K)
-  [001.011ms] [+1.17x]  default
-  [905.683µs] [+1.05x]  codeBy only
-  [864.760µs] [fastest] hoist only
-  [938.330µs] [+1.09x]  skip only
+  [825.416µs] [+1.19x]  default
+  [695.662µs] [+1.01x]  codeBy only
+  [692.105µs] [+1.00x]  hoist only
+  [690.978µs] [fastest] skip only
 Synthetic: admonitions x50
-  [320.000ns] [fastest] element
+  [340.000ns] [fastest] element
 Synthetic: 10x10 table
-  [260.000ns] [fastest] element
+  [251.000ns] [fastest] element
 Synthetic: code-by x100
-  [420.000ns] [fastest] element
+  [361.000ns] [fastest] element
 escapeMarkdown: 9 variants  (0% special chars)
   [461.000ns] [fastest]  production (hybrid)
-  [081.870µs] [+177.59x] loop (Set.has)
-  [471.000ns] [+1.02x]   regex (.replace)
-  [001.012µs] [+2.20x]   matchAll (for..of)
+  [080.341µs] [+174.28x] loop (Set.has)
+  [481.000ns] [+1.04x]   regex (.replace)
+  [001.022µs] [+2.22x]   matchAll (for..of)
   [481.000ns] [+1.04x]   exec (while loop)
-  [014.627µs] [+31.73x]  superFast (Uint8Array+slice)
+  [011.692µs] [+25.36x]  superFast (Uint8Array+slice)
   [010.991µs] [+23.84x]  godMode (decode buffer)
-  [006.312µs] [+13.69x]  scanBuild (encode+substring)
-  [002.385µs] [+5.17x]   execBuffer (exec+encoder)
+  [006.372µs] [+13.82x]  scanBuild (encode+substring)
+  [002.394µs] [+5.19x]   execBuffer (exec+encoder)
 escapeMarkdown: 9 variants  (1% special chars)
-  [018.925µs] [+1.45x]  production (hybrid)
-  [123.142µs] [+9.45x]  loop (Set.has)
-  [019.116µs] [+1.47x]  regex (.replace)
-  [015.589µs] [+1.20x]  matchAll (for..of)
-  [013.035µs] [fastest] exec (while loop)
-  [025.458µs] [+1.95x]  superFast (Uint8Array+slice)
-  [019.918µs] [+1.53x]  godMode (decode buffer)
-  [018.635µs] [+1.43x]  scanBuild (encode+substring)
-  [032.812µs] [+2.52x]  execBuffer (exec+encoder)
+  [019.156µs] [+1.48x]  production (hybrid)
+  [119.274µs] [+9.20x]  loop (Set.has)
+  [026.270µs] [+2.03x]  regex (.replace)
+  [015.299µs] [+1.18x]  matchAll (for..of)
+  [012.965µs] [fastest] exec (while loop)
+  [025.177µs] [+1.94x]  superFast (Uint8Array+slice)
+  [019.086µs] [+1.47x]  godMode (decode buffer)
+  [018.365µs] [+1.42x]  scanBuild (encode+substring)
+  [022.903µs] [+1.77x]  execBuffer (exec+encoder)
 escapeMarkdown: 9 variants  (5% special chars)
-  [005.420µs] [+1.36x]  production (hybrid)
-  [029.125µs] [+7.32x]  loop (Set.has)
-  [051.417µs] [+12.93x] regex (.replace)
-  [037.120µs] [+9.33x]  matchAll (for..of)
-  [033.043µs] [+8.31x]  exec (while loop)
-  [012.112µs] [+3.04x]  superFast (Uint8Array+slice)
-  [003.978µs] [fastest] godMode (decode buffer)
-  [012.203µs] [+3.07x]  scanBuild (encode+substring)
-  [058.300µs] [+14.66x] execBuffer (exec+encoder)
+  [004.008µs] [fastest] production (hybrid)
+  [028.424µs] [+7.09x]  loop (Set.has)
+  [048.918µs] [+12.20x] regex (.replace)
+  [037.155µs] [+9.27x]  matchAll (for..of)
+  [032.326µs] [+8.07x]  exec (while loop)
+  [012.534µs] [+3.13x]  superFast (Uint8Array+slice)
+  [004.338µs] [+1.08x]  godMode (decode buffer)
+  [012.283µs] [+3.06x]  scanBuild (encode+substring)
+  [054.553µs] [+13.61x] execBuffer (exec+encoder)
 escapeMarkdown: 9 variants  (50% special chars)
-  [005.360µs] [fastest] production (hybrid)
-  [040.506µs] [+7.56x]  loop (Set.has)
-  [331.676µs] [+61.88x] regex (.replace)
-  [251.153µs] [+46.86x] matchAll (for..of)
-  [244.195µs] [+45.56x] exec (while loop)
-  [016.977µs] [+3.17x]  superFast (Uint8Array+slice)
-  [007.785µs] [+1.45x]  godMode (decode buffer)
-  [031.309µs] [+5.84x]  scanBuild (encode+substring)
-  [191.591µs] [+35.74x] execBuffer (exec+encoder)
-collapseWhitespace: buffer vs loop
-  [019.958µs] [fastest] production (buffer+encode)
-  [084.630µs] [+4.24x]  loop (for..of+ +=)
-collapseWhitespace: buffer vs loop  (no whitespace)
-  [017.152µs] [fastest] production (buffer+encode)
-  [068.630µs] [+4.00x]  loop (for..of+ +=)
+  [005.300µs] [fastest] production (hybrid)
+  [039.815µs] [+7.51x]  loop (Set.has)
+  [346.253µs] [+65.33x] regex (.replace)
+  [251.264µs] [+47.41x] matchAll (for..of)
+  [226.837µs] [+42.80x] exec (while loop)
+  [016.992µs] [+3.21x]  superFast (Uint8Array+slice)
+  [007.895µs] [+1.49x]  godMode (decode buffer)
+  [029.972µs] [+5.65x]  scanBuild (encode+substring)
+  [178.006µs] [+33.59x] execBuffer (exec+encoder)
+collapseWhitespace
+  [020.679µs] [fastest] production (buffer+encode)
+  [081.263µs] [+3.93x]  loop (for..of+ +=)
 collapseTrim
-  [162.357µs] [fastest] collapseTrim
+  [033.378µs] [fastest] production (regex)

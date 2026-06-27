@@ -15,19 +15,13 @@ function collapseLoop(text: string): string {
   return out
 }
 
-using g1 = bench.group("collapseWhitespace: buffer vs loop")
+using g1 = bench.group("collapseWhitespace")
 
 const wsText = "  hello   world\n\n\nfoo   bar  ".repeat(500)
 bench("production (buffer+encode)", () => { collapseWhitespace(wsText) })
 bench("loop (for..of+ +=)", () => { collapseLoop(wsText) })
 
-using g2 = bench.group("collapseWhitespace: buffer vs loop  (no whitespace)")
-
-const plainText = "hello world this is plain text with no extra whitespace".repeat(200)
-bench("production (buffer+encode)", () => { collapseWhitespace(plainText) })
-bench("loop (for..of+ +=)", () => { collapseLoop(plainText) })
-
-using g3 = bench.group("collapseTrim")
+using g2 = bench.group("collapseTrim")
 
 const bigText = "  hello   world\n\n\nfoo   bar  ".repeat(500)
-bench("collapseTrim", () => { collapseTrim(bigText) })
+bench("production (regex)", () => { collapseTrim(bigText) })

@@ -235,21 +235,7 @@ export function flushPendingInline(blocks: Block[], pending: Inline[] | null) {
 }
 
 export function collapseTrim(s: string): string {
-  let start = 0, end = s.length
-  while (start < end && s[start] === '\n') start++
-  while (end > start && s[end - 1] === '\n') end--
-  let out: string[] = []
-  let newlineCount = 0
-  for (let i = start; i < end; i++) {
-    if (s[i] === '\n') {
-      newlineCount++
-      if (newlineCount <= 2) out.push('\n')
-    } else {
-      newlineCount = 0
-      out.push(s[i])
-    }
-  }
-  return out.join('')
+  return s.replace(/^[\n]+|[\n]+$/g, '').replace(/\n{3,}/g, '\n\n')
 }
 
 export function postProcess(md: string): string {
