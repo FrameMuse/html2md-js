@@ -68,6 +68,4 @@ export class HtmlToMd {
   }
 }
 
-export function htmlToMd(input: ElementLike, options?: HtmlToMdOptions): string {
-  return new HtmlToMd(options).convert(input)
-}
+

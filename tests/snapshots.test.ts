@@ -1,6 +1,10 @@
 import { describe, test, expect, beforeAll } from "bun:test"
 import { readFileSync } from "fs"
-import { htmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
+import { HtmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
+import type { HtmlToMdOptions } from "../src/index.ts"
+import type { ElementLike } from "../src/options.ts"
+
+const convert = (el: ElementLike, opts?: HtmlToMdOptions) => new HtmlToMd(opts).convert(el)
 import { DOMParser } from "linkedom"
 
 const parser = new DOMParser()
@@ -23,7 +27,7 @@ describe("full page snapshots", () => {
     const doc = parse(docHtml)
     const el = doc.querySelector("div.theme-doc-markdown.markdown")
     if (!el) throw new Error("selector not found")
-    const result = htmlToMd(el, {
+    const result = convert(el, {
       codeBy: ["h3.property", ".sig"],
     })
     expect(result).toMatchSnapshot()
@@ -35,7 +39,7 @@ describe("full page snapshots", () => {
       doc.querySelector("div.theme-doc-markdown.markdown") ??
       doc.querySelector("div#__blog-post-container.markdown")
     if (!el) throw new Error("selector not found")
-    const result = htmlToMd(el)
+    const result = convert(el)
     expect(result).toMatchSnapshot()
   })
 
@@ -44,7 +48,7 @@ describe("full page snapshots", () => {
     const doc = parse(html)
     const el = doc.querySelector("div.theme-doc-markdown.markdown")
     if (!el) throw new Error("selector not found")
-    const result = htmlToMd(el, {
+    const result = convert(el, {
       flags: HOIST_IMAGES | HOIST_LINKS,
       skip: SkipFlags.ARIA_HIDDEN,
       codeBy: ["h3.property", ".sig"],
@@ -86,7 +90,7 @@ console.log(x);</code></pre>
     </body></html>`
 
     const doc = parse(html)
-    const result = htmlToMd(doc.body)
+    const result = convert(doc.body)
     expect(result).toMatchSnapshot()
   })
 })

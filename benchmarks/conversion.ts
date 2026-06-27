@@ -1,8 +1,11 @@
 import { bench } from "benchik"
 import { readFileSync } from "fs"
-import { htmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
+import { HtmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
 import type { HtmlToMdOptions } from "../src/index.ts"
+import type { ElementLike } from "../src/options.ts"
 import { DOMParser } from "linkedom"
+
+const convert = (el: ElementLike, opts?: HtmlToMdOptions) => new HtmlToMd(opts).convert(el)
 
 const parser = new DOMParser()
 const FIXTURES = "tests/fixtures"
@@ -36,18 +39,18 @@ await bench.untilCompiled()
 
   for (const name of ["page", "prereqs", "figma"] as const) {
     const el = { page: pageEl, prereqs: prereqsEl, figma: figmaEl }[name]
-    bench(`${name} (${SIZE_LABEL[name]})`, () => htmlToMd(el))
-    bench(`${name} +full opts`, () => htmlToMd(el, fullOpts))
+    bench(`${name} (${SIZE_LABEL[name]})`, () => convert(el))
+    bench(`${name} +full opts`, () => convert(el, fullOpts))
   }
 }
 
 {
   using g2 = bench.group("Option breakdown (figma 96.1K)")
 
-  bench("default", () => htmlToMd(figmaEl))
-  bench("codeBy only", () => htmlToMd(figmaEl, { codeBy: ["h3.property", ".sig"] }))
-  bench("hoist only", () => htmlToMd(figmaEl, { flags: HOIST_IMAGES | HOIST_LINKS }))
-  bench("skip only", () => htmlToMd(figmaEl, { skip: SkipFlags.ARIA_HIDDEN }))
+  bench("default", () => convert(figmaEl))
+  bench("codeBy only", () => convert(figmaEl, { codeBy: ["h3.property", ".sig"] }))
+  bench("hoist only", () => convert(figmaEl, { flags: HOIST_IMAGES | HOIST_LINKS }))
+  bench("skip only", () => convert(figmaEl, { skip: SkipFlags.ARIA_HIDDEN }))
 }
 {
   using g3 = bench.group("Synthetic: admonitions x50")
@@ -55,7 +58,7 @@ await bench.untilCompiled()
   const admonHtml = `<div class="theme-admonition-note"><div class="admonitionContent"><p>Lorem ipsum dolor sit amet.</p></div></div>`.repeat(50)
   const admonEl = parser.parseFromString(admonHtml, "text/html").body
 
-  bench("element", () => htmlToMd(admonEl))
+  bench("element", () => convert(admonEl))
 }
 {
   using g4 = bench.group("Synthetic: 10x10 table")
@@ -63,7 +66,7 @@ await bench.untilCompiled()
   const tableHtml = `<table><thead><tr>${"<th>H</th>".repeat(10)}</tr></thead><tbody>${"<tr>" + "<td>cell</td>".repeat(10) + "</tr>".repeat(10)}</tbody></table>`
   const tableEl = parser.parseFromString(tableHtml, "text/html").body
 
-  bench("element", () => htmlToMd(tableEl))
+  bench("element", () => convert(tableEl))
 }
 {
   using g5 = bench.group("Synthetic: code-by x100")
@@ -71,5 +74,5 @@ await bench.untilCompiled()
   const codeByHtml = "<h3 class=\"property\">annotations: ReadonlyArray&lt;<a href=\"/docs/Annotation/\">Annotation</a>&gt;</h3>".repeat(100)
   const codeByEl = parser.parseFromString(codeByHtml, "text/html").body
 
-  bench("element", () => htmlToMd(codeByEl, { codeBy: ["h3.property"] }))
+  bench("element", () => convert(codeByEl, { codeBy: ["h3.property"] }))
 }
