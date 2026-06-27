@@ -40,7 +40,8 @@ function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): str
 
 function serializeBlocks(blocks: Block[], opts: ResolvedOptions, depth: number): string {
   let out = ''
-  for (const b of blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i]
     if (isBlockBlank(b)) continue
     out += serializeBlock(b, opts, depth)
   }
@@ -123,8 +124,8 @@ function serializeTable(headers: Inline[][], rows: Inline[][][], opts: ResolvedO
   if (!headers.length && !rows.length) return ''
 
   let colCount = headers.length
-  for (const row of rows) {
-    if (row.length > colCount) colCount = row.length
+  for (let r = 0; r < rows.length; r++) {
+    if (rows[r].length > colCount) colCount = rows[r].length
   }
 
   const cell = (text: string) => {
@@ -143,7 +144,8 @@ function serializeTable(headers: Inline[][], rows: Inline[][][], opts: ResolvedO
   }
   out += '\n'
 
-  for (const row of rows) {
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r]
     out += '|'
     for (let i = 0; i < colCount; i++) {
       let content = i < row.length ? row[i] : []
@@ -160,8 +162,8 @@ function serializeTable(headers: Inline[][], rows: Inline[][][], opts: ResolvedO
 
 function serializeInlines(inlines: Inline[], opts: ResolvedOptions): string {
   let out = ''
-  for (const i of inlines) {
-    out += serializeInline(i, opts)
+  for (let i = 0; i < inlines.length; i++) {
+    out += serializeInline(inlines[i], opts)
   }
   return out
 }

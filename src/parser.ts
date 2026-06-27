@@ -28,12 +28,15 @@ import {
 
 function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: Block[]): void {
   let contentChildren: Block[] = []
-  for (const child of elem.children) {
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    const child = ch[i]
     if (child.localName === 'div') {
       const c = child.getAttribute?.('class') ?? ''
       if (c.includes('admonitionContent')) {
-        for (const gc of child.childNodes) {
-          convertNode(gc, ctx, contentChildren)
+        const gcNodes = child.childNodes
+        for (let j = 0; j < gcNodes.length; j++) {
+          convertNode(gcNodes[j], ctx, contentChildren)
         }
       }
     }
@@ -44,15 +47,15 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
   out.push({ type: 'blockquote', children: blocks })
 }
 
-
-
 // ---- inline conversion ----
 // All inline functions return true when any content was pushed to `out`.
 // Wrapper elements (strong/em/a) check inner content for non-blank before pushing.
 
 function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
   let added = false
-  for (const child of node.childNodes) {
+  const cn = node.childNodes
+  for (let i = 0; i < cn.length; i++) {
+    const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       const text = (child as TextLike).textContent ?? ''
       const collapsed = collapseWhitespace(text)
@@ -72,7 +75,9 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]
   function flush() {
     if (buf) { out.push({ type: 'code', text: buf }); buf = '' }
   }
-  for (const child of node.childNodes) {
+  const cn = node.childNodes
+  for (let i = 0; i < cn.length; i++) {
+    const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       buf += (child as TextLike).textContent ?? ''
     } else if (child.nodeType === ELEMENT_NODE) {
@@ -226,7 +231,9 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
 }
 
 function collectListInlines(elem: ElementLike, marker: string, ctx: Context, out: Inline[]): void {
-  for (const li of elem.children) {
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    const li = ch[i]
     if (li.localName !== 'li') continue
     if (out.length) out.push({ type: 'linebreak' })
     out.push({ type: 'text', text: marker + ' ' })
@@ -236,7 +243,9 @@ function collectListInlines(elem: ElementLike, marker: string, ctx: Context, out
 
 function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Context, out: Inline[]): void {
   let n = start
-  for (const li of elem.children) {
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    const li = ch[i]
     if (li.localName !== 'li') continue
     if (out.length) out.push({ type: 'linebreak' })
     out.push({ type: 'text', text: n + '. ' })
@@ -293,7 +302,12 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       return
     }
 
-    case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6': {
+    case 'h1':
+    case 'h2':
+    case 'h3':
+    case 'h4':
+    case 'h5':
+    case 'h6': {
       const level = parseInt(tag[1], 10)
       const inlines: Inline[] = []
       collectInlines(elem, ctx, inlines)
@@ -421,8 +435,9 @@ function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): vo
 }
 
 function convertChildren(elem: ElementLike, ctx: Context, out: Block[]): void {
-  for (const child of elem.childNodes) {
-    convertNode(child, ctx, out)
+  const cn = elem.childNodes
+  for (let i = 0; i < cn.length; i++) {
+    convertNode(cn[i], ctx, out)
   }
 }
 
@@ -430,7 +445,9 @@ function convertChildren(elem: ElementLike, ctx: Context, out: Block[]): void {
 
 function collectListItems(elem: ElementLike, ctx: Context): ListItem[] {
   const items: ListItem[] = []
-  for (const child of elem.children) {
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    const child = ch[i]
     if (child.localName === 'li') {
       const hasBlocks = hasBlockChildrenExceptLi(child)
       let blocks: Block[]
@@ -450,7 +467,9 @@ function collectListItems(elem: ElementLike, ctx: Context): ListItem[] {
 function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[] {
   const blocks: Block[] = []
   let pending: Inline[] | null = null
-  for (const child of elem.childNodes) {
+  const cn = elem.childNodes
+  for (let i = 0; i < cn.length; i++) {
+    const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       const text = (child as TextLike).textContent ?? ''
       if (!text.trim()) { flushPendingInline(blocks, pending); pending = null; continue }
@@ -479,8 +498,9 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
 }
 
 function hasBlockChildrenExceptLi(elem: ElementLike): boolean {
-  for (const child of elem.children) {
-    const t = child.localName
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    const t = ch[i].localName
     if (t === 'ul' || t === 'ol') return true
     if (BLOCK_TAGS.has(t) && t !== 'li') return true
   }
@@ -494,24 +514,28 @@ function convertTable(elem: ElementLike, ctx: Context, out: Block[]): void {
   const rows: Inline[][][] = []
 
   let directTrs: ElementLike[] = []
-  for (const child of elem.children) {
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    const child = ch[i]
     const t = child.localName
     if (t === 'thead') {
-      for (const tr of child.children) {
-        if (tr.localName === 'tr') readRow(tr, headers, rows, ctx)
+      const trs = child.children
+      for (let j = 0; j < trs.length; j++) {
+        if (trs[j].localName === 'tr') readRow(trs[j], headers, rows, ctx)
         break
       }
     } else if (t === 'tbody') {
-      for (const tr of child.children) {
-        if (tr.localName === 'tr') readRow(tr, headers, rows, ctx)
+      const trs = child.children
+      for (let j = 0; j < trs.length; j++) {
+        if (trs[j].localName === 'tr') readRow(trs[j], headers, rows, ctx)
       }
     } else if (t === 'tr') {
       directTrs.push(child)
     }
   }
 
-  for (const tr of directTrs) {
-    readRow(tr, headers, rows, ctx)
+  for (let i = 0; i < directTrs.length; i++) {
+    readRow(directTrs[i], headers, rows, ctx)
   }
 
   if (!headers.length && rows.length) {
@@ -527,7 +551,9 @@ function convertTable(elem: ElementLike, ctx: Context, out: Block[]): void {
 function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: Context): void {
   const row: Inline[][] = []
   let hadHeader = false
-  for (const cell of tr.children) {
+  const cells = tr.children
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i]
     const t = cell.localName
     const cellInlines: Inline[] = []
     collectInlines(cell, ctx, cellInlines)
@@ -543,4 +569,3 @@ function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: 
 }
 
 export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable }
-

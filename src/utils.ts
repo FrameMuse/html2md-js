@@ -87,16 +87,18 @@ const ADMONITION_MAP: Record<string, string> = {
 }
 
 export function admonitionType(cls: string): string | null {
-  for (const token of cls.split(RE_SPLIT_WS)) {
-    const mapped = ADMONITION_MAP[token]
+  const tokens = cls.split(RE_SPLIT_WS)
+  for (let i = 0; i < tokens.length; i++) {
+    const mapped = ADMONITION_MAP[tokens[i]]
     if (mapped) return mapped
   }
   return null
 }
 
 export function hasBlockChildren(elem: ElementLike): boolean {
-  for (const child of elem.children) {
-    if (BLOCK_TAGS.has(child.localName)) return true
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    if (BLOCK_TAGS.has(ch[i].localName)) return true
   }
   return false
 }
@@ -104,7 +106,9 @@ export function hasBlockChildren(elem: ElementLike): boolean {
 export function getTextContent(node: NodeLike): string {
   if (node.nodeType === TEXT_NODE) return node.textContent ?? ''
   let out = ''
-  for (const child of node.childNodes) {
+  const cn = node.childNodes
+  for (let i = 0; i < cn.length; i++) {
+    const child = cn[i]
     if (child.nodeType === TEXT_NODE) out += child.textContent ?? ''
     else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
@@ -116,9 +120,10 @@ export function getTextContent(node: NodeLike): string {
 }
 
 export function hasLinkChildren(elem: ElementLike): boolean {
-  for (const child of elem.children) {
-    if (child.localName === 'a') return true
-    if (hasLinkChildren(child)) return true
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    if (ch[i].localName === 'a') return true
+    if (hasLinkChildren(ch[i])) return true
   }
   return false
 }
@@ -209,15 +214,18 @@ export function isBlockBlank(block: Block): boolean {
 }
 
 export function findChild(elem: ElementLike, tag: string): ElementLike | null {
-  for (const child of elem.children) {
-    if (child.localName === tag) return child
+  const ch = elem.children
+  for (let i = 0; i < ch.length; i++) {
+    if (ch[i].localName === tag) return ch[i]
   }
   return null
 }
 
 export function getCodeText(elem: ElementLike): string {
   let out = ''
-  for (const child of elem.childNodes) {
+  const cn = elem.childNodes
+  for (let i = 0; i < cn.length; i++) {
+    const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       out += (child as TextLike).textContent ?? ''
     } else if (child.nodeType === ELEMENT_NODE) {
