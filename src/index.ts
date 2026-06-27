@@ -566,11 +566,11 @@ function convertElement(elem: Element, ctx: Context): Block[] {
       propagateLanguage(elem)
       const codeEl = findChild(elem, 'code')
       if (codeEl) {
-        const codeText = codeEl.textContent ?? ''
+        const codeText = getCodeText(codeEl)
         const lang = extractLanguage(codeEl)
         return [blockCodeBlock(lang, codeText, true)]
       }
-      const text = elem.textContent ?? ''
+      const text = getCodeText(elem)
       return [blockCodeBlock(undefined, text, false)]
     }
 
@@ -646,6 +646,20 @@ function findChild(elem: Element, tag: string): Element | null {
     if (child.localName === tag) return child
   }
   return null
+}
+
+function getCodeText(elem: Element): string {
+  let out = ''
+  for (const child of elem.childNodes) {
+    if (child.nodeType === TEXT_NODE) {
+      out += (child as Text).textContent ?? ''
+    } else if (child.nodeType === ELEMENT_NODE) {
+      const el = child as Element
+      if (el.localName === 'br') out += '\n'
+      else out += getCodeText(el)
+    }
+  }
+  return out
 }
 
 function extractLanguage(elem: Element): string | undefined {

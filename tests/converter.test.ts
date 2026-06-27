@@ -135,6 +135,18 @@ describe("code blocks", () => {
       '<pre class="language-js"><code>const a = 1;</code></pre>',
     )).toBe("```js\nconst a = 1;\n```");
   });
+
+  test("pre code with br inside span preserves newlines", () => {
+    expect(htmlToMd(
+      '<pre><code><span>line1</span><br><span>line2</span></code></pre>',
+    )).toBe("```\nline1\nline2\n```");
+  });
+
+  test("prism-code with span/br multiline", () => {
+    expect(htmlToMd(
+      '<pre class="prism-code language-json"><code><span class="token-line"><span class="token punctuation">[</span></span><br><span class="token-line"><span class="token punctuation">]</span></span></code></pre>',
+    )).toBe("```json\n[\n]\n```");
+  });
 });
 
 describe("tables", () => {
