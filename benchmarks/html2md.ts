@@ -2,7 +2,7 @@ import { bench } from "benchik"
 import { readFileSync } from "fs"
 import { htmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
 import type { HtmlToMdOptions } from "../src/index.ts"
-import { escapeMarkdown, collapseWhitespace, collapseTrim } from "../src/utils.ts"
+import { escapeMarkdown, escapeMarkdownWithReplace, collapseWhitespace, collapseTrim } from "../src/utils.ts"
 import { DOMParser } from "linkedom"
 
 const parser = new DOMParser()
@@ -66,12 +66,27 @@ const codeByEl = parser.parseFromString(codeByHtml, "text/html").body
 
 bench("element", () => { htmlToMd(codeByEl, { codeBy: ["h3.property"] }) })
 
-using g6 = bench.group("Internal: escapeMarkdown")
+// ---- escapeMarkdown: loop vs regex ----
 
-const escapeText = "hello_world *foo* [bar] #baz +qux -quux !thing `code`".repeat(200)
-bench("escape", () => { escapeMarkdown(escapeText) })
+using g6 = bench.group("escapeMarkdown: loop vs regex  (0% special chars)")
 
-using g7 = bench.group("Internal: collapseWhitespace / collapseTrim")
+const plainText = "hello world this is plain text with no special characters".repeat(200)
+bench("loop (Set.has)", () => { escapeMarkdown(plainText) })
+bench("regex (.replace)", () => { escapeMarkdownWithReplace(plainText) })
+
+using g7 = bench.group("escapeMarkdown: loop vs regex  (5% special chars)")
+
+const mixedText = "hello_world *foo* [bar] #baz +qux -quux !thing `code` and some plain text here".repeat(50)
+bench("loop (Set.has)", () => { escapeMarkdown(mixedText) })
+bench("regex (.replace)", () => { escapeMarkdownWithReplace(mixedText) })
+
+using g8 = bench.group("escapeMarkdown: loop vs regex  (50% special chars)")
+
+const denseText = "\\*_[]#+-!`\\*_[]#+-!`\\*_[]#+-!`\\*_[]#+-!`".repeat(100)
+bench("loop (Set.has)", () => { escapeMarkdown(denseText) })
+bench("regex (.replace)", () => { escapeMarkdownWithReplace(denseText) })
+
+using g9 = bench.group("Internal: collapseWhitespace / collapseTrim")
 
 const wsText = "  hello   world\n\n\nfoo   bar  ".repeat(500)
 bench("collapseWhitespace", () => { collapseWhitespace(wsText) })

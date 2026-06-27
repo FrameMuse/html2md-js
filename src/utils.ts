@@ -1,28 +1,31 @@
 import {
-  type Inline,
   type Block,
-  type ListItem,
-  type ResolvedOptions,
   type CodeByRule,
   type ElementLike,
+  type Inline,
+  type ListItem,
   type NodeLike,
   type TextLike,
   BLOCK_TAGS,
-  SKIP_TAGS,
   CONTAINER_TAGS,
   ELEMENT_NODE,
-  TEXT_NODE,
-} from './options.ts'
+  SKIP_TAGS,
+  TEXT_NODE
+} from './options'
 
 const ESCAPE_CHARS = new Set(['\\', '*', '_', '[', ']', '#', '+', '-', '!', '`'])
 
 export function escapeMarkdown(text: string): string {
   let out = ''
   for (const c of text) {
-    if (ESCAPE_CHARS.has(c)) out += '\\' + c
-    else out += c
+    if (ESCAPE_CHARS.has(c)) out += '\\'
+    out += c
   }
   return out
+}
+
+export function escapeMarkdownWithReplace(text: string): string {
+  return text.replace(/([\\*_`\[\]{}()#+\-\.!])/g, '\\$1')
 }
 
 export function collapseWhitespace(s: string): string {
@@ -137,13 +140,6 @@ export function inlinesBlank(inlines: Inline[]): boolean {
     if (!isInlineBlank(inlines[i])) return false
   }
   return true
-}
-
-function anyInlineBlank(inlines: Inline[]): boolean {
-  for (let i = 0; i < inlines.length; i++) {
-    if (isInlineBlank(inlines[i])) return true
-  }
-  return false
 }
 
 export function isBlockBlank(block: Block): boolean {

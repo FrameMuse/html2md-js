@@ -1,0 +1,30 @@
+Element input (pre-parsed DOM)
+  [022.122µs] [+1.11x]  page (0.6K)
+  [019.968µs] [fastest] page +full opts
+  [228.681µs] [+11.45x] prereqs (24.8K)
+  [146.917µs] [+7.36x]  prereqs +full opts
+  [001.220ms] [+61.08x] figma (96.1K)
+  [001.978ms] [+99.04x] figma +full opts
+Option breakdown (figma 96.1K)
+  [001.073ms] [+1.03x]  default
+  [001.037ms] [fastest] codeBy only
+  [001.095ms] [+1.06x]  hoist only
+  [001.124ms] [+1.08x]  skip only
+Synthetic: admonitions x50
+  [301.000ns] [fastest] element
+Synthetic: 10x10 table
+  [241.000ns] [fastest] element
+Synthetic: code-by x100
+  [350.000ns] [fastest] element
+escapeMarkdown: loop vs regex  (0% special chars)
+  [083.608µs] [+170.63x] loop (Set.has)
+  [490.000ns] [fastest]  regex (.replace)
+escapeMarkdown: loop vs regex  (5% special chars)
+  [029.275µs] [fastest] loop (Set.has)
+  [049.313µs] [+1.68x]  regex (.replace)
+escapeMarkdown: loop vs regex  (50% special chars)
+  [040.767µs] [fastest] loop (Set.has)
+  [340.011µs] [+8.34x]  regex (.replace)
+Internal: collapseWhitespace / collapseTrim
+  [118.453µs] [fastest] collapseWhitespace
+  [190.659µs] [+1.61x]  collapseTrim

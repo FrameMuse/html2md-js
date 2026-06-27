@@ -1,21 +1,20 @@
-import type { HtmlToMdOptions, ElementLike, Block } from './options.ts'
+import type { Block, ElementLike, HtmlToMdOptions } from './options'
 import {
-  SkipFlags,
-  resolveOptions,
   makeCtx,
-} from './options.ts'
+  resolveOptions
+} from './options'
+import {
+  convertChildren,
+} from './parser'
+import {
+  serializeBlocks,
+} from './serializer'
 import {
   collapseTrim,
   postProcess,
-} from './utils.ts'
-import {
-  convertChildren,
-} from './parser.ts'
-import {
-  serializeBlocks,
-} from './serializer.ts'
+} from './utils'
 
-export { HOIST_IMAGES, HOIST_LINKS, SkipFlags } from './options.ts'
+export { HOIST_IMAGES, HOIST_LINKS, SkipFlags } from './options'
 export type { HtmlToMdOptions }
 
 export function htmlToMd(input: ElementLike, options?: HtmlToMdOptions): string {

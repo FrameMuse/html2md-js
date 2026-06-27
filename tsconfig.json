@@ -16,7 +16,8 @@
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     "noEmitOnError": false,
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "types": ["bun"]
   },
   "include": ["src", "tests"]
 }

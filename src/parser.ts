@@ -1,10 +1,10 @@
-import type { Context, Block, Inline, ListItem, ElementLike, NodeLike, TextLike } from './options.ts'
+import type { Context, Block, Inline, ListItem, ElementLike, NodeLike, TextLike } from './options'
 import {
   ELEMENT_NODE,
   TEXT_NODE,
   SkipFlags,
   BLOCK_TAGS,
-} from './options.ts'
+} from './options'
 import {
   escapeMarkdown,
   collapseWhitespace,
@@ -22,7 +22,7 @@ import {
   getCodeText,
   extractLanguage,
   flushPendingInline,
-} from './utils.ts'
+} from './utils'
 
 // ---- admonition detection ----
 

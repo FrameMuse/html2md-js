@@ -1,12 +1,11 @@
-import type { Block, Inline, ResolvedOptions } from './options.ts'
+import type { Block, Inline, ListItem, ResolvedOptions } from './options'
 import {
   HOIST_IMAGES,
   HOIST_LINKS,
-} from './options.ts'
+} from './options'
 import {
-  isInlineBlank,
-  isBlockBlank,
-} from './utils.ts'
+  isBlockBlank
+} from './utils'
 
 function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): string {
   switch (block.type) {
@@ -76,7 +75,7 @@ function serializeBlockQuote(blocks: Block[], opts: ResolvedOptions, depth: numb
   return out + '\n\n'
 }
 
-function serializeList(ordered: boolean, start: number, items: import('./options.ts').ListItem[], opts: ResolvedOptions, depth: number): string {
+function serializeList(ordered: boolean, start: number, items: ListItem[], opts: ResolvedOptions, depth: number): string {
   let indent = '  '.repeat(depth)
   let out = ''
   for (let i = 0; i < items.length; i++) {
@@ -94,7 +93,7 @@ function serializeList(ordered: boolean, start: number, items: import('./options
   return out
 }
 
-function serializeListItem(item: import('./options.ts').ListItem, opts: ResolvedOptions, _depth: number, _prefixLen: number, _indent: string): string {
+function serializeListItem(item: ListItem, opts: ResolvedOptions, _depth: number, _prefixLen: number, _indent: string): string {
   let content = ''
   for (let i = 0; i < item.blocks.length; i++) {
     const b = item.blocks[i]
