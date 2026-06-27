@@ -202,13 +202,7 @@ function serializeInline(inline: Inline, opts: ResolvedOptions): string {
       let content = serializeInlines(inline.children ?? [], opts)
       let url = inline.url ?? ''
       if (opts.flags & HOIST_LINKS && url) {
-        let ref = opts.hoisted.get(url)
-        if (!ref) {
-          let title = inline.title && inline.title !== content ? inline.title : undefined
-          ref = { ref: 'ref' + opts.hoisted.size, title }
-          opts.hoisted.set(url, ref)
-        }
-        return '[' + content + '][' + ref.ref + ']'
+        return '[' + content + '][' + opts.hoisted.addLink(url, content, inline.title).ref + ']'
       }
       let out = '[' + content + '](' + url
       if (inline.title && inline.title !== content) out += ' "' + inline.title + '"'
@@ -221,12 +215,7 @@ function serializeInline(inline: Inline, opts: ResolvedOptions): string {
       let url = inline.url ?? ''
       let title = inline.title
       if (opts.flags & HOIST_IMAGES) {
-        let ref = opts.hoisted.get(url)
-        if (!ref) {
-          ref = { ref: 'img' + opts.hoisted.size, title }
-          opts.hoisted.set(url, ref)
-        }
-        return '![' + alt + '][' + ref.ref + ']'
+        return '![' + alt + '][' + opts.hoisted.addImage(url, title).ref + ']'
       }
       let out = '![' + alt + '](' + url
       if (title) out += ' "' + title + '"'

@@ -34,6 +34,39 @@ export interface ImageRef {
   title?: string
 }
 
+export class HoistedMap extends Map<string, ImageRef> {
+  #footer = ''
+
+  get footer(): string {
+    return this.#footer
+  }
+
+  addImage(url: string, title?: string): ImageRef {
+    let ref = this.get(url)
+    if (!ref) {
+      ref = { ref: 'img' + this.size, title }
+      super.set(url, ref)
+      this.#footer += `[${ref.ref}]: ${url}`
+      if (title) this.#footer += ` "${title}"`
+      this.#footer += '\n'
+    }
+    return ref
+  }
+
+  addLink(url: string, content: string, title?: string): ImageRef {
+    let ref = this.get(url)
+    if (!ref) {
+      const includeTitle = title && title !== content ? title : undefined
+      ref = { ref: 'ref' + this.size, title: includeTitle }
+      super.set(url, ref)
+      this.#footer += `[${ref.ref}]: ${url}`
+      if (includeTitle) this.#footer += ` "${includeTitle}"`
+      this.#footer += '\n'
+    }
+    return ref
+  }
+}
+
 export interface ResolvedOptions {
   headingStyle: 'atx' | 'setext'
   codeBlockStyle: 'fenced' | 'indented'
@@ -45,7 +78,7 @@ export interface ResolvedOptions {
   codeBy: CodeByRule[]
   flags: number
   skip: number
-  hoisted: Map<string, ImageRef>
+  hoisted: HoistedMap
 }
 
 export interface Block {
@@ -136,7 +169,7 @@ export function resolveOptions(opts?: HtmlToMdOptions): ResolvedOptions {
     codeBy: (opts?.codeBy ?? []).map(parseCodeByRule),
     flags: opts?.flags ?? 0,
     skip: opts?.skip ?? 0,
-    hoisted: new Map(),
+    hoisted: new HoistedMap(),
   }
 }
 

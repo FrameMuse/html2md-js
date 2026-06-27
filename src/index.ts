@@ -1,7 +1,5 @@
 import type { HtmlToMdOptions, ElementLike, Block } from './options.ts'
 import {
-  HOIST_IMAGES,
-  HOIST_LINKS,
   SkipFlags,
   resolveOptions,
   makeCtx,
@@ -17,7 +15,7 @@ import {
   serializeBlocks,
 } from './serializer.ts'
 
-export { HOIST_IMAGES, HOIST_LINKS, SkipFlags }
+export { HOIST_IMAGES, HOIST_LINKS, SkipFlags } from './options.ts'
 export type { HtmlToMdOptions }
 
 export function htmlToMd(input: ElementLike, options?: HtmlToMdOptions): string {
@@ -29,15 +27,7 @@ export function htmlToMd(input: ElementLike, options?: HtmlToMdOptions): string 
   result = collapseTrim(result)
   result = postProcess(result)
 
-  if ((opts.flags & (HOIST_IMAGES | HOIST_LINKS)) && opts.hoisted.size) {
-    let footer = '\n\n'
-    for (const [url, ref] of opts.hoisted) {
-      footer += '[' + ref.ref + ']: ' + url
-      if (ref.title) footer += ' "' + ref.title + '"'
-      footer += '\n'
-    }
-    result += footer
-  }
+  if (opts.hoisted.size) result += '\n\n' + opts.hoisted.footer
 
   return result
 }
