@@ -89,8 +89,30 @@ export interface ResolvedOptions {
   hoisted: HoistedMap
 }
 
+export enum InlineType {
+  text = 'text',
+  strong = 'strong',
+  emphasis = 'emphasis',
+  highlight = 'highlight',
+  code = 'code',
+  link = 'link',
+  image = 'image',
+  linebreak = 'linebreak',
+}
+
+export enum BlockType {
+  document = 'document',
+  heading = 'heading',
+  paragraph = 'paragraph',
+  blockquote = 'blockquote',
+  list = 'list',
+  codeblock = 'codeblock',
+  hr = 'hr',
+  table = 'table',
+}
+
 export interface Block {
-  type: 'document' | 'heading' | 'paragraph' | 'blockquote' | 'list' | 'codeblock' | 'hr' | 'table'
+  type: BlockType
   level?: number
   content?: Inline[]
   children?: Block[]
@@ -109,7 +131,7 @@ export interface ListItem {
 }
 
 export interface Inline {
-  type: 'text' | 'strong' | 'emphasis' | 'code' | 'link' | 'image' | 'linebreak' | 'highlight'
+  type: InlineType
   text?: string
   children?: Inline[]
   url?: string

@@ -1,5 +1,7 @@
-import type { Block, Inline, ListItem, ResolvedOptions } from './options'
+import type { Block, Inline, ResolvedOptions } from './options'
 import {
+  BlockType,
+  InlineType,
   HOIST_IMAGES,
   HOIST_LINKS,
 } from './options'
@@ -9,28 +11,28 @@ import {
 
 function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): string {
   switch (block.type) {
-    case 'document':
+    case BlockType.document:
       return serializeBlocks(block.children ?? [], opts, depth)
 
-    case 'heading':
+    case BlockType.heading:
       return serializeHeading(block.level!, block.content!, opts)
 
-    case 'paragraph':
+    case BlockType.paragraph:
       return serializeParagraph(block.content ?? [], opts)
 
-    case 'blockquote':
+    case BlockType.blockquote:
       return serializeBlockQuote(block.children ?? [], opts, depth)
 
-    case 'list':
+    case BlockType.list:
       return serializeList(block.ordered!, block.start ?? 1, block.items ?? [], opts, depth)
 
-    case 'codeblock':
+    case BlockType.codeblock:
       return serializeCodeBlock(block.language, block.code ?? '', block.fenced ?? true, opts)
 
-    case 'hr':
+    case BlockType.hr:
       return opts.hr + '\n\n'
 
-    case 'table':
+    case BlockType.table:
       return serializeTable(block.headers ?? [], block.rows ?? [], opts)
 
     default:
@@ -99,11 +101,11 @@ function serializeListItem(item: ListItem, opts: ResolvedOptions, _depth: number
   for (let i = 0; i < item.blocks.length; i++) {
     const b = item.blocks[i]
     const next = i < item.blocks.length - 1 ? item.blocks[i + 1] : null
-    if (b.type === 'paragraph') {
+    if (b.type === BlockType.paragraph) {
       content += serializeInlines(b.content ?? [], opts)
-      if (next && next.type === 'list') content += '\n'
+      if (next && next.type === BlockType.list) content += '\n'
       else if (next) content += '\n\n'
-    } else if (b.type === 'list') {
+    } else if (b.type === BlockType.list) {
       content += serializeBlock(b, opts, _depth)
     } else {
       content += serializeBlock(b, opts, _depth)
@@ -170,28 +172,28 @@ function serializeInlines(inlines: Inline[], opts: ResolvedOptions): string {
 
 function serializeInline(inline: Inline, opts: ResolvedOptions): string {
   switch (inline.type) {
-    case 'text':
+    case InlineType.text:
       return inline.text ?? ''
 
-    case 'strong': {
+    case InlineType.strong: {
       let inner = serializeInlines(inline.children ?? [], opts)
       if (!inner.trim()) return ''
       return opts.strongDelimiter + inner + opts.strongDelimiter
     }
 
-    case 'emphasis': {
+    case InlineType.emphasis: {
       let inner = serializeInlines(inline.children ?? [], opts)
       if (!inner.trim()) return ''
       return opts.emDelimiter + inner + opts.emDelimiter
     }
 
-    case 'highlight': {
+    case InlineType.highlight: {
       let inner = serializeInlines(inline.children ?? [], opts)
       if (!inner.trim()) return ''
       return '==' + inner + '=='
     }
 
-    case 'code': {
+    case InlineType.code: {
       let text = inline.text ?? ''
       if (!text) return ''
       let bt = text.includes('`') ? '``' : '`'
@@ -199,7 +201,7 @@ function serializeInline(inline: Inline, opts: ResolvedOptions): string {
       return bt + space + text + space + bt
     }
 
-    case 'link': {
+    case InlineType.link: {
       let content = serializeInlines(inline.children ?? [], opts)
       let url = inline.url ?? ''
       if (opts.flags & HOIST_LINKS && url) {
@@ -211,7 +213,7 @@ function serializeInline(inline: Inline, opts: ResolvedOptions): string {
       return out
     }
 
-    case 'image': {
+    case InlineType.image: {
       let alt = inline.alt ?? ''
       let url = inline.url ?? ''
       let title = inline.title
@@ -224,7 +226,7 @@ function serializeInline(inline: Inline, opts: ResolvedOptions): string {
       return out
     }
 
-    case 'linebreak':
+    case InlineType.linebreak:
       return '  \n'
 
     default:

@@ -1,5 +1,7 @@
 import type { Block, Context, ElementLike, Inline, ListItem, NodeLike, TextLike } from './options'
 import {
+  BlockType,
+  InlineType,
   BLOCK_TAGS,
   CONTAINER_TAGS,
   ELEMENT_NODE,
@@ -45,9 +47,9 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
     }
   }
   if (!contentChildren.length) return
-  const firstP: Inline[] = [{ type: 'text', text: `[!${atype}]` }]
-  const blocks: Block[] = [{ type: 'paragraph', content: firstP }, ...contentChildren]
-  out.push({ type: 'blockquote', children: blocks })
+  const firstP: Inline[] = [{ type: InlineType.text, text: `[!${atype}]` }]
+  const blocks: Block[] = [{ type: BlockType.paragraph, content: firstP }, ...contentChildren]
+  out.push({ type: BlockType.blockquote, children: blocks })
 }
 
 // ---- inline conversion ----
@@ -63,7 +65,7 @@ function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
       const text = (child as TextLike).textContent ?? ''
       const collapsed = collapseWhitespace(text)
       if (collapsed) {
-        out.push({ type: 'text', text: escapeMarkdown(collapsed) })
+        out.push({ type: InlineType.text, text: escapeMarkdown(collapsed) })
         added = true
       }
     } else if (child.nodeType === ELEMENT_NODE) {
@@ -76,7 +78,7 @@ function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
 function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]): void {
   let buf = ''
   function flush() {
-    if (buf) { out.push({ type: 'code', text: buf }); buf = '' }
+    if (buf) { out.push({ type: InlineType.code, text: buf }); buf = '' }
   }
   const cn = node.childNodes
   for (let i = 0; i < cn.length; i++) {
@@ -91,7 +93,7 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]
         const title = el.getAttribute?.('title') ?? undefined
         const content: Inline[] = []
         collectInlines(el, ctx, content)
-        out.push({ type: 'link', children: content, url: href, title })
+        out.push({ type: InlineType.link, children: content, url: href, title })
       } else if (el.localName === 'br') {
         buf += '\n'
       } else if (el.localName === 'code') {
@@ -114,7 +116,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
     collectInlines(elem, ctx, inner)
     for (let i = 0; i < inner.length; i++) {
       if (!isInlineBlank(inner[i])) {
-        out.push({ type: 'strong', children: inner })
+        out.push({ type: InlineType.strong, children: inner })
         return true
       }
     }
@@ -126,7 +128,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
     collectInlines(elem, ctx, inner)
     for (let i = 0; i < inner.length; i++) {
       if (!isInlineBlank(inner[i])) {
-        out.push({ type: 'emphasis', children: inner })
+        out.push({ type: InlineType.emphasis, children: inner })
         return true
       }
     }
@@ -138,7 +140,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
     collectInlines(elem, ctx, inner)
     for (let i = 0; i < inner.length; i++) {
       if (!isInlineBlank(inner[i])) {
-        out.push({ type: 'highlight', children: inner })
+        out.push({ type: InlineType.highlight, children: inner })
         return true
       }
     }
@@ -153,7 +155,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
     }
     const text = elem.textContent ?? ''
     if (!text) return false
-    out.push({ type: 'code', text })
+    out.push({ type: InlineType.code, text })
     return true
   }
 
@@ -171,7 +173,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
       for (let i = 0; i < content.length; i++) out.push(content[i])
       return true
     }
-    out.push({ type: 'link', children: content, url: href, title })
+    out.push({ type: InlineType.link, children: content, url: href, title })
     return true
   }
 
@@ -180,12 +182,12 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
     if (!src) return false
     const alt = elem.getAttribute?.('alt') ?? ''
     const title = elem.getAttribute?.('title') ?? undefined
-    out.push({ type: 'image', alt, url: src, title })
+    out.push({ type: InlineType.image, alt, url: src, title })
     return true
   }
 
   if (tag === 'br') {
-    out.push({ type: 'linebreak' })
+    out.push({ type: InlineType.linebreak })
     return true
   }
 
@@ -194,7 +196,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
     collectInlines(elem, ctx, inner)
     for (let i = 0; i < inner.length; i++) {
       if (!isInlineBlank(inner[i])) {
-        out.push({ type: 'emphasis', children: inner })
+        out.push({ type: InlineType.emphasis, children: inner })
         return true
       }
     }
@@ -206,7 +208,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
     collectInlines(elem, ctx, inner)
     for (let i = 0; i < inner.length; i++) {
       if (!isInlineBlank(inner[i])) {
-        out.push({ type: 'strong', children: inner })
+        out.push({ type: InlineType.strong, children: inner })
         return true
       }
     }
@@ -238,8 +240,8 @@ function collectListInlines(elem: ElementLike, marker: string, ctx: Context, out
   for (let i = 0; i < ch.length; i++) {
     const li = ch[i]
     if (li.localName !== 'li') continue
-    if (out.length) out.push({ type: 'linebreak' })
-    out.push({ type: 'text', text: marker + ' ' })
+    if (out.length) out.push({ type: InlineType.linebreak })
+    out.push({ type: InlineType.text, text: marker + ' ' })
     collectInlines(li, ctx, out)
   }
 }
@@ -250,8 +252,8 @@ function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Contex
   for (let i = 0; i < ch.length; i++) {
     const li = ch[i]
     if (li.localName !== 'li') continue
-    if (out.length) out.push({ type: 'linebreak' })
-    out.push({ type: 'text', text: n + '. ' })
+    if (out.length) out.push({ type: InlineType.linebreak })
+    out.push({ type: InlineType.text, text: n + '. ' })
     collectInlines(li, ctx, out)
     n++
   }
@@ -264,7 +266,7 @@ function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
     const text = (node as TextLike).textContent ?? ''
     const trimmed = text.trim()
     if (!trimmed) return
-    out.push({ type: 'paragraph', content: [{ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) }] })
+    out.push({ type: BlockType.paragraph, content: [{ type: InlineType.text, text: escapeMarkdown(collapseWhitespace(text)) }] })
     return
   }
   if (node.nodeType === ELEMENT_NODE) {
@@ -300,7 +302,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       const inlines: Inline[] = []
       collectInlines(elem, ctx, inlines)
       if (inlines.length && !inlinesBlank(inlines)) {
-        out.push({ type: 'paragraph', content: inlines })
+        out.push({ type: BlockType.paragraph, content: inlines })
       }
       return
     }
@@ -315,7 +317,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       const inlines: Inline[] = []
       collectInlines(elem, ctx, inlines)
       if (inlines.length && !inlinesBlank(inlines)) {
-        out.push({ type: 'heading', level, content: inlines })
+        out.push({ type: BlockType.heading, level, content: inlines })
       }
       return
     }
@@ -324,14 +326,14 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       const children: Block[] = []
       convertChildren(elem, ctx, children)
       if (children.length) {
-        out.push({ type: 'blockquote', children })
+        out.push({ type: BlockType.blockquote, children })
       }
       return
     }
 
     case 'ul': {
       const items = collectListItems(elem, ctx)
-      if (items.length) out.push({ type: 'list', ordered: false, items, start: 1 })
+      if (items.length) out.push({ type: BlockType.list, ordered: false, items, start: 1 })
       return
     }
 
@@ -339,7 +341,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       const startStr = elem.getAttribute?.('start')
       const start = startStr ? parseInt(startStr, 10) : 1
       const items = collectListItems(elem, ctx)
-      if (items.length) out.push({ type: 'list', ordered: true, items, start })
+      if (items.length) out.push({ type: BlockType.list, ordered: true, items, start })
       return
     }
 
@@ -348,16 +350,16 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       if (codeEl) {
         const codeText = getCodeText(codeEl)
         const lang = extractLanguage(elem) || extractLanguage(codeEl)
-        out.push({ type: 'codeblock', language: lang, code: codeText, fenced: true })
+        out.push({ type: BlockType.codeblock, language: lang, code: codeText, fenced: true })
       } else {
         const text = getCodeText(elem)
-        out.push({ type: 'codeblock', language: extractLanguage(elem), code: text, fenced: false })
+        out.push({ type: BlockType.codeblock, language: extractLanguage(elem), code: text, fenced: false })
       }
       return
     }
 
     case 'hr':
-      out.push({ type: 'hr' })
+      out.push({ type: BlockType.hr })
       return
 
     case 'table':
@@ -376,7 +378,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       const inlines: Inline[] = []
       collectInlines(elem, ctx, inlines)
       if (inlines.length && !inlinesBlank(inlines)) {
-        out.push({ type: 'paragraph', content: inlines })
+        out.push({ type: BlockType.paragraph, content: inlines })
       }
     }
     return
@@ -387,7 +389,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
     const inlines: Inline[] = []
     collectInlines(elem, ctx, inlines)
     if (inlines.length && !inlinesBlank(inlines)) {
-      out.push({ type: 'paragraph', content: [{ type: 'emphasis', children: inlines }] })
+      out.push({ type: BlockType.paragraph, content: [{ type: InlineType.emphasis, children: inlines }] })
     }
     return
   }
@@ -396,7 +398,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
     const inlines: Inline[] = []
     collectInlines(elem, ctx, inlines)
     if (inlines.length && !inlinesBlank(inlines)) {
-      out.push({ type: 'paragraph', content: [{ type: 'strong', children: inlines }] })
+      out.push({ type: BlockType.paragraph, content: [{ type: InlineType.strong, children: inlines }] })
     }
     return
   }
@@ -405,7 +407,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   if (INLINE_ELEMENTS.has(tag)) {
     const inlines: Inline[] = []
     if (convertInline(elem, ctx, inlines)) {
-      out.push({ type: 'paragraph', content: inlines })
+      out.push({ type: BlockType.paragraph, content: inlines })
     }
     return
   }
@@ -421,20 +423,20 @@ function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): vo
     const level = parseInt(tag[1], 10)
     const inlines: Inline[] = []
     collectInlinesWithCodeSplit(elem, ctx, inlines)
-    if (inlines.length) out.push({ type: 'heading', level, content: inlines })
+    if (inlines.length) out.push({ type: BlockType.heading, level, content: inlines })
     return
   }
 
   if (tag === 'p' || tag === 'div' || tag === 'span') {
     const inlines: Inline[] = []
     collectInlinesWithCodeSplit(elem, ctx, inlines)
-    if (inlines.length) out.push({ type: 'paragraph', content: inlines })
+    if (inlines.length) out.push({ type: BlockType.paragraph, content: inlines })
     return
   }
 
   const inlines: Inline[] = []
   collectInlinesWithCodeSplit(elem, ctx, inlines)
-  if (inlines.length) out.push({ type: 'paragraph', content: inlines })
+  if (inlines.length) out.push({ type: BlockType.paragraph, content: inlines })
 }
 
 function convertChildren(elem: ElementLike, ctx: Context, out: Block[]): void {
@@ -459,7 +461,7 @@ function collectListItems(elem: ElementLike, ctx: Context): ListItem[] {
       } else {
         const inlines: Inline[] = []
         collectInlines(child, ctx, inlines)
-        blocks = inlines.length && !inlinesBlank(inlines) ? [{ type: 'paragraph', content: inlines }] : []
+        blocks = inlines.length && !inlinesBlank(inlines) ? [{ type: BlockType.paragraph, content: inlines }] : []
       }
       items.push({ blocks })
     }
@@ -477,7 +479,7 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
       const text = (child as TextLike).textContent ?? ''
       if (!text.trim()) { flushPendingInline(blocks, pending); pending = null; continue }
       if (!pending) pending = []
-      pending.push({ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) })
+      pending.push({ type: InlineType.text, text: escapeMarkdown(collapseWhitespace(text)) })
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (BLOCK_TAGS.has(el.localName) && el.localName !== 'li') {
@@ -547,7 +549,7 @@ function convertTable(elem: ElementLike, ctx: Context, out: Block[]): void {
   }
 
   if (headers.length || rows.length) {
-    out.push({ type: 'table', headers, rows })
+    out.push({ type: BlockType.table, headers, rows })
   }
 }
 

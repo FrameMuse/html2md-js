@@ -6,6 +6,8 @@ import {
   type ListItem,
   type NodeLike,
   type TextLike,
+  BlockType,
+  InlineType,
   BLOCK_TAGS,
   ELEMENT_NODE,
   TEXT_NODE
@@ -130,24 +132,24 @@ export function hasLinkChildren(elem: ElementLike): boolean {
 
 export function isInlineBlank(i: Inline): boolean {
   switch (i.type) {
-    case 'text': return !i.text || !i.text.trim()
-    case 'strong': case 'emphasis': case 'highlight': {
+    case InlineType.text: return !i.text || !i.text.trim()
+    case InlineType.strong: case InlineType.emphasis: case InlineType.highlight: {
       if (!i.children) return true
       for (let j = 0; j < i.children.length; j++) {
         if (!isInlineBlank(i.children[j])) return false
       }
       return true
     }
-    case 'code': return !i.text
-    case 'link': {
+    case InlineType.code: return !i.text
+    case InlineType.link: {
       if (!i.children) return true
       for (let j = 0; j < i.children.length; j++) {
         if (!isInlineBlank(i.children[j])) return false
       }
       return true
     }
-    case 'image': return false
-    case 'linebreak': return false
+    case InlineType.image: return false
+    case InlineType.linebreak: return false
   }
 }
 
@@ -160,29 +162,29 @@ export function inlinesBlank(inlines: Inline[]): boolean {
 
 export function isBlockBlank(block: Block): boolean {
   switch (block.type) {
-    case 'document': {
+    case BlockType.document: {
       if (!block.children) return true
       for (let i = 0; i < block.children.length; i++) {
         if (!isBlockBlank(block.children[i])) return false
       }
       return true
     }
-    case 'paragraph': {
+    case BlockType.paragraph: {
       if (!block.content) return true
       return inlinesBlank(block.content)
     }
-    case 'heading': {
+    case BlockType.heading: {
       if (!block.content) return true
       return inlinesBlank(block.content)
     }
-    case 'blockquote': {
+    case BlockType.blockquote: {
       if (!block.children) return true
       for (let i = 0; i < block.children.length; i++) {
         if (!isBlockBlank(block.children[i])) return false
       }
       return true
     }
-    case 'list': {
+    case BlockType.list: {
       if (!block.items) return true
       for (let i = 0; i < block.items.length; i++) {
         const item = block.items[i]
@@ -193,8 +195,8 @@ export function isBlockBlank(block: Block): boolean {
       }
       return true
     }
-    case 'codeblock': return !block.code?.trim()
-    case 'table':
+    case BlockType.codeblock: return !block.code?.trim()
+    case BlockType.table:
       if (block.headers) {
         for (let i = 0; i < block.headers.length; i++) {
           if (!inlinesBlank(block.headers[i])) return false
@@ -209,7 +211,7 @@ export function isBlockBlank(block: Block): boolean {
         }
       }
       return true
-    case 'hr': return false
+    case BlockType.hr: return false
   }
 }
 
@@ -260,17 +262,17 @@ export function postProcess(md: string): string {
 }
 
 export function blockParagraph(content: Inline[]): Block {
-  return { type: 'paragraph', content }
+  return { type: BlockType.paragraph, content }
 }
 
 export function blockBlockQuote(children: Block[]): Block {
-  return { type: 'blockquote', children }
+  return { type: BlockType.blockquote, children }
 }
 
 export function blockList(ordered: boolean, items: ListItem[], start?: number): Block {
-  return { type: 'list', ordered, items, start: start ?? 1 }
+  return { type: BlockType.list, ordered, items, start: start ?? 1 }
 }
 
 export function blockCodeBlock(language: string | undefined, code: string, fenced: boolean): Block {
-  return { type: 'codeblock', language, code, fenced }
+  return { type: BlockType.codeblock, language, code, fenced }
 }
