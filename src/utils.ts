@@ -103,7 +103,35 @@ export function escapeMarkdownHybrid(text: string): string {
   return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
 }
 
-new TextEncoder
+export function escapeMarkdownExecBuffer(text: string): string {
+  const { written: srcLen } = encoder.encodeInto(text, SRC_BUFFER)
+  if (srcLen === 0) return text
+
+  ESCAPE_RE.lastIndex = 0
+  let destIdx = 0
+  let lastByte = 0
+  let match: RegExpExecArray | null
+
+  while ((match = ESCAPE_RE.exec(text)) !== null) {
+    const matchByteOffset = match.index
+    if (matchByteOffset > lastByte) {
+      const segLen = matchByteOffset - lastByte
+      DEST_BUFFER.set(SRC_BUFFER.subarray(lastByte, matchByteOffset), destIdx)
+      destIdx += segLen
+    }
+    DEST_BUFFER[destIdx++] = 92
+    DEST_BUFFER[destIdx++] = SRC_BUFFER[matchByteOffset]
+    lastByte = matchByteOffset + 1
+  }
+
+  if (lastByte < srcLen) {
+    const segLen = srcLen - lastByte
+    DEST_BUFFER.set(SRC_BUFFER.subarray(lastByte, srcLen), destIdx)
+    destIdx += segLen
+  }
+
+  return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
+}
 
 export function escapeMarkdownSuperFast(text: string): string {
   const len = text.length
