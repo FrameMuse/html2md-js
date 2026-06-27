@@ -13,10 +13,6 @@ import {
   isContainerTag,
   matchesCodeBy,
   admonitionType,
-  blockParagraph,
-  blockBlockQuote,
-  blockList,
-  blockCodeBlock,
   hasBlockChildren,
   getTextContent,
   hasLinkChildren,
@@ -30,23 +26,22 @@ import {
 
 // ---- admonition detection ----
 
-function convertAdmonition(elem: ElementLike, atype: string, ctx: Context): Block[] {
+function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: Block[]): void {
   let contentChildren: Block[] = []
   for (const child of elem.children) {
     if (child.localName === 'div') {
       const c = child.getAttribute?.('class') ?? ''
       if (c.includes('admonitionContent')) {
         for (const gc of child.childNodes) {
-          const blocks = convertNode(gc, ctx)
-          contentChildren.push(...blocks)
+          convertNode(gc, ctx, contentChildren)
         }
       }
     }
   }
-  if (!contentChildren.length) return []
+  if (!contentChildren.length) return
   const firstP: Inline[] = [{ type: 'text', text: `[!${atype}]` }]
-  const blocks: Block[] = [blockParagraph(firstP), ...contentChildren]
-  return [blockBlockQuote(blocks)]
+  const blocks: Block[] = [{ type: 'paragraph', content: firstP }, ...contentChildren]
+  out.push({ type: 'blockquote', children: blocks })
 }
 
 // ---- language propagation ----
@@ -66,29 +61,30 @@ function propagateLanguage(pre: ElementLike): void {
 }
 
 // ---- inline conversion ----
+// All inline functions return true when any content was pushed to `out`.
+// Wrapper elements (strong/em/a) check inner content for non-blank before pushing.
 
-type InlineResult = Inline[]
-
-function collectInlines(node: NodeLike, ctx: Context): InlineResult {
-  const result: Inline[] = []
+function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
+  let added = false
   for (const child of node.childNodes) {
     if (child.nodeType === TEXT_NODE) {
       const text = (child as TextLike).textContent ?? ''
       const collapsed = collapseWhitespace(text)
-      if (collapsed) result.push({ type: 'text', text: escapeMarkdown(collapsed) })
+      if (collapsed) {
+        out.push({ type: 'text', text: escapeMarkdown(collapsed) })
+        added = true
+      }
     } else if (child.nodeType === ELEMENT_NODE) {
-      const inline = convertInline(child as ElementLike, ctx)
-      if (inline) result.push(...inline)
+      if (convertInline(child as ElementLike, ctx, out)) added = true
     }
   }
-  return result
+  return added
 }
 
-function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context): InlineResult {
-  const result: Inline[] = []
+function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]): void {
   let buf = ''
   function flush() {
-    if (buf) { result.push({ type: 'code', text: buf }); buf = '' }
+    if (buf) { out.push({ type: 'code', text: buf }); buf = '' }
   }
   for (const child of node.childNodes) {
     if (child.nodeType === TEXT_NODE) {
@@ -99,8 +95,9 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context): InlineResult
         flush()
         const href = el.getAttribute?.('href') ?? ''
         const title = el.getAttribute?.('title') ?? undefined
-        const content = collectInlines(el, ctx)
-        result.push({ type: 'link', children: content, url: href, title })
+        const content: Inline[] = []
+        collectInlines(el, ctx, content)
+        out.push({ type: 'link', children: content, url: href, title })
       } else if (el.localName === 'br') {
         buf += '\n'
       } else if (el.localName === 'code') {
@@ -111,139 +108,178 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context): InlineResult
     }
   }
   flush()
-  return result
 }
 
-function convertInline(elem: ElementLike, ctx: Context): InlineResult | null {
+function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean {
   const tag = elem.localName
 
-  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return null
+  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return false
 
   if (tag === 'strong' || tag === 'b') {
-    const inner = collectInlines(elem, ctx)
-    if (inner.every(i => isInlineBlank(i))) return null
-    return [{ type: 'strong', children: inner }]
+    const inner: Inline[] = []
+    collectInlines(elem, ctx, inner)
+    for (let i = 0; i < inner.length; i++) {
+      if (!isInlineBlank(inner[i])) {
+        out.push({ type: 'strong', children: inner })
+        return true
+      }
+    }
+    return false
   }
 
   if (tag === 'i') {
-    const inner = collectInlines(elem, ctx)
-    if (inner.every(i => isInlineBlank(i))) return null
-    return [{ type: 'emphasis', children: inner }]
+    const inner: Inline[] = []
+    collectInlines(elem, ctx, inner)
+    for (let i = 0; i < inner.length; i++) {
+      if (!isInlineBlank(inner[i])) {
+        out.push({ type: 'emphasis', children: inner })
+        return true
+      }
+    }
+    return false
   }
 
   if (tag === 'em') {
-    const inner = collectInlines(elem, ctx)
-    if (inner.every(i => isInlineBlank(i))) return null
-    return [{ type: 'highlight', children: inner }]
+    const inner: Inline[] = []
+    collectInlines(elem, ctx, inner)
+    for (let i = 0; i < inner.length; i++) {
+      if (!isInlineBlank(inner[i])) {
+        out.push({ type: 'highlight', children: inner })
+        return true
+      }
+    }
+    return false
   }
 
   if (tag === 'code') {
     const hasLinks = hasLinkChildren(elem)
-    if (hasLinks) return collectInlinesWithCodeSplit(elem, ctx)
+    if (hasLinks) {
+      collectInlinesWithCodeSplit(elem, ctx, out)
+      return true
+    }
     const text = elem.textContent ?? ''
-    if (!text) return null
-    return [{ type: 'code', text }]
+    if (!text) return false
+    out.push({ type: 'code', text })
+    return true
   }
 
   if (tag === 'a') {
     const href = elem.getAttribute?.('href') ?? ''
     const title = elem.getAttribute?.('title') ?? undefined
-    const content = collectInlines(elem, ctx)
-    if (content.every(i => isInlineBlank(i))) return null
-    if (!href && !title) {
-      return content
+    const content: Inline[] = []
+    collectInlines(elem, ctx, content)
+    let nonBlank = false
+    for (let i = 0; i < content.length; i++) {
+      if (!isInlineBlank(content[i])) { nonBlank = true; break }
     }
-    return [{ type: 'link', children: content, url: href, title }]
+    if (!nonBlank) return false
+    if (!href && !title) {
+      for (let i = 0; i < content.length; i++) out.push(content[i])
+      return true
+    }
+    out.push({ type: 'link', children: content, url: href, title })
+    return true
   }
 
   if (tag === 'img') {
     const src = elem.getAttribute?.('src') ?? ''
-    if (!src) return null
+    if (!src) return false
     const alt = elem.getAttribute?.('alt') ?? ''
     const title = elem.getAttribute?.('title') ?? undefined
-    return [{ type: 'image', alt, url: src, title }]
+    out.push({ type: 'image', alt, url: src, title })
+    return true
   }
 
   if (tag === 'br') {
-    return [{ type: 'linebreak' }]
+    out.push({ type: 'linebreak' })
+    return true
   }
 
   if (tag === 'figcaption') {
-    const inner = collectInlines(elem, ctx)
-    if (inner.every(i => isInlineBlank(i))) return null
-    return [{ type: 'emphasis', children: inner }]
+    const inner: Inline[] = []
+    collectInlines(elem, ctx, inner)
+    for (let i = 0; i < inner.length; i++) {
+      if (!isInlineBlank(inner[i])) {
+        out.push({ type: 'emphasis', children: inner })
+        return true
+      }
+    }
+    return false
   }
 
   if (tag === 'address') {
-    const inner = collectInlines(elem, ctx)
-    if (inner.every(i => isInlineBlank(i))) return null
-    return [{ type: 'strong', children: inner }]
+    const inner: Inline[] = []
+    collectInlines(elem, ctx, inner)
+    for (let i = 0; i < inner.length; i++) {
+      if (!isInlineBlank(inner[i])) {
+        out.push({ type: 'strong', children: inner })
+        return true
+      }
+    }
+    return false
   }
 
   if (tag === 'ul') {
-    return collectListInlines(elem, '-', ctx)
+    collectListInlines(elem, '-', ctx, out)
+    return true
   }
 
   if (tag === 'ol') {
     const start = parseInt(elem.getAttribute?.('start') ?? '1', 10)
-    return collectOrderedListInlines(elem, start, ctx)
+    collectOrderedListInlines(elem, start, ctx, out)
+    return true
   }
 
   // pass-through inline containers
   if (['span', 'small', 'mark', 'abbr', 'cite', 'q', 'sub', 'sup', 'time'].includes(tag)) {
-    return collectInlines(elem, ctx)
+    collectInlines(elem, ctx, out)
+    return true
   }
 
-  return collectInlines(elem, ctx)
+  return collectInlines(elem, ctx, out)
 }
 
-function collectListInlines(elem: ElementLike, marker: string, ctx: Context): Inline[] {
-  const result: Inline[] = []
+function collectListInlines(elem: ElementLike, marker: string, ctx: Context, out: Inline[]): void {
   for (const li of elem.children) {
     if (li.localName !== 'li') continue
-    if (result.length) result.push({ type: 'linebreak' })
-    const content = collectInlines(li, ctx)
-    result.push({ type: 'text', text: marker + ' ' })
-    result.push(...content)
+    if (out.length) out.push({ type: 'linebreak' })
+    out.push({ type: 'text', text: marker + ' ' })
+    collectInlines(li, ctx, out)
   }
-  return result
 }
 
-function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Context): Inline[] {
-  const result: Inline[] = []
+function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Context, out: Inline[]): void {
   let n = start
   for (const li of elem.children) {
     if (li.localName !== 'li') continue
-    if (result.length) result.push({ type: 'linebreak' })
-    const content = collectInlines(li, ctx)
-    result.push({ type: 'text', text: n + '. ' })
-    result.push(...content)
+    if (out.length) out.push({ type: 'linebreak' })
+    out.push({ type: 'text', text: n + '. ' })
+    collectInlines(li, ctx, out)
     n++
   }
-  return result
 }
 
 // ---- block conversion ----
 
-function convertNode(node: NodeLike, ctx: Context): Block[] {
+function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
   if (node.nodeType === TEXT_NODE) {
     const text = (node as TextLike).textContent ?? ''
-    if (!text.trim()) return []
-    const inlines: Inline[] = [{ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) }]
-    return [blockParagraph(inlines)]
+    const trimmed = text.trim()
+    if (!trimmed) return
+    out.push({ type: 'paragraph', content: [{ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) }] })
+    return
   }
   if (node.nodeType === ELEMENT_NODE) {
-    return convertElement(node as ElementLike, ctx)
+    convertElement(node as ElementLike, ctx, out)
   }
-  return []
 }
 
-function convertElement(elem: ElementLike, ctx: Context): Block[] {
+function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   const tag = elem.localName
 
-  if (isSkipTag(tag)) return []
+  if (isSkipTag(tag)) return
 
-  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return []
+  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return
 
   const SKIP_TAG_FLAGS: Record<string, number> = {
     header: SkipFlags.HEADER,
@@ -253,52 +289,62 @@ function convertElement(elem: ElementLike, ctx: Context): Block[] {
     menu: SkipFlags.MENU,
   }
   const tagFlag = SKIP_TAG_FLAGS[tag]
-  if (tagFlag !== undefined && (ctx.options.skip & tagFlag)) return []
+  if (tagFlag !== undefined && (ctx.options.skip & tagFlag)) return
 
   // code-by matched element
   if (matchesCodeBy(elem, ctx.options.codeBy)) {
-    return convertCodeByElement(elem, ctx)
+    convertCodeByElement(elem, ctx, out)
+    return
   }
 
   // admonition
   if (tag === 'div') {
     const cls = elem.getAttribute?.('class') ?? ''
     const atype = admonitionType(cls)
-    if (atype) return convertAdmonition(elem, atype, ctx)
+    if (atype) { convertAdmonition(elem, atype, ctx, out); return }
   }
 
   switch (tag) {
     case 'p': {
-      const inlines = collectInlines(elem, ctx)
-      if (inlinesBlank(inlines)) return []
-      return [blockParagraph(inlines)]
+      const inlines: Inline[] = []
+      collectInlines(elem, ctx, inlines)
+      if (inlines.length && !inlinesBlank(inlines)) {
+        out.push({ type: 'paragraph', content: inlines })
+      }
+      return
     }
 
     case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6': {
       const level = parseInt(tag[1], 10)
-      const inlines = collectInlines(elem, ctx)
-      if (inlinesBlank(inlines)) return []
-      return [{ type: 'heading', level, content: inlines }]
+      const inlines: Inline[] = []
+      collectInlines(elem, ctx, inlines)
+      if (inlines.length && !inlinesBlank(inlines)) {
+        out.push({ type: 'heading', level, content: inlines })
+      }
+      return
     }
 
     case 'blockquote': {
-      const blocks = convertChildren(elem, ctx)
-      if (!blocks.length) return []
-      return [blockBlockQuote(blocks)]
+      const children: Block[] = []
+      convertChildren(elem, ctx, children)
+      if (children.length) {
+        out.push({ type: 'blockquote', children })
+      }
+      return
     }
 
     case 'ul': {
       const items = collectListItems(elem, ctx)
-      if (!items.length) return []
-      return [blockList(false, items)]
+      if (items.length) out.push({ type: 'list', ordered: false, items, start: 1 })
+      return
     }
 
     case 'ol': {
       const startStr = elem.getAttribute?.('start')
       const start = startStr ? parseInt(startStr, 10) : 1
       const items = collectListItems(elem, ctx)
-      if (!items.length) return []
-      return [blockList(true, items, start)]
+      if (items.length) out.push({ type: 'list', ordered: true, items, start })
+      return
     }
 
     case 'pre': {
@@ -307,17 +353,21 @@ function convertElement(elem: ElementLike, ctx: Context): Block[] {
       if (codeEl) {
         const codeText = getCodeText(codeEl)
         const lang = extractLanguage(codeEl)
-        return [blockCodeBlock(lang, codeText, true)]
+        out.push({ type: 'codeblock', language: lang, code: codeText, fenced: true })
+      } else {
+        const text = getCodeText(elem)
+        out.push({ type: 'codeblock', language: undefined, code: text, fenced: false })
       }
-      const text = getCodeText(elem)
-      return [blockCodeBlock(undefined, text, false)]
+      return
     }
 
     case 'hr':
-      return [{ type: 'hr' }]
+      out.push({ type: 'hr' })
+      return
 
     case 'table':
-      return convertTable(elem, ctx)
+      convertTable(elem, ctx, out)
+      return
 
     default:
       break
@@ -326,68 +376,76 @@ function convertElement(elem: ElementLike, ctx: Context): Block[] {
   // container elements (div, section, etc.)
   if (isContainerTag(tag)) {
     if (hasBlockChildren(elem)) {
-      return convertChildren(elem, ctx)
+      convertChildren(elem, ctx, out)
+    } else {
+      const inlines: Inline[] = []
+      collectInlines(elem, ctx, inlines)
+      if (inlines.length && !inlinesBlank(inlines)) {
+        out.push({ type: 'paragraph', content: inlines })
+      }
     }
-    const inlines = collectInlines(elem, ctx)
-    if (inlinesBlank(inlines)) return []
-    return [blockParagraph(inlines)]
+    return
   }
 
   // figcaption, address handled as inline wrappers at block level
   if (tag === 'figcaption') {
-    const inlines = collectInlines(elem, ctx)
-    if (inlinesBlank(inlines)) return []
-    return [blockParagraph([{ type: 'emphasis', children: inlines }])]
+    const inlines: Inline[] = []
+    collectInlines(elem, ctx, inlines)
+    if (inlines.length && !inlinesBlank(inlines)) {
+      out.push({ type: 'paragraph', content: [{ type: 'emphasis', children: inlines }] })
+    }
+    return
   }
 
   if (tag === 'address') {
-    const inlines = collectInlines(elem, ctx)
-    if (inlinesBlank(inlines)) return []
-    return [blockParagraph([{ type: 'strong', children: inlines }])]
+    const inlines: Inline[] = []
+    collectInlines(elem, ctx, inlines)
+    if (inlines.length && !inlinesBlank(inlines)) {
+      out.push({ type: 'paragraph', content: [{ type: 'strong', children: inlines }] })
+    }
+    return
   }
 
   // inline elements at block level
   if (['a', 'strong', 'b', 'em', 'i', 'code', 'span', 'img', 'br'].includes(tag)) {
-    const result = convertInline(elem, ctx)
-    if (!result || inlinesBlank(result)) return []
-    return [blockParagraph(result)]
+    const inlines: Inline[] = []
+    if (convertInline(elem, ctx, inlines)) {
+      out.push({ type: 'paragraph', content: inlines })
+    }
+    return
   }
 
   // unknown - try children
-  return convertChildren(elem, ctx)
+  convertChildren(elem, ctx, out)
 }
 
-function convertCodeByElement(elem: ElementLike, ctx: Context): Block[] {
+function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   const tag = elem.localName
 
   if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
     const level = parseInt(tag[1], 10)
-    const inlines = collectInlinesWithCodeSplit(elem, ctx)
-    if (inlinesBlank(inlines)) return []
-    return [{ type: 'heading', level, content: inlines }]
+    const inlines: Inline[] = []
+    collectInlinesWithCodeSplit(elem, ctx, inlines)
+    if (inlines.length) out.push({ type: 'heading', level, content: inlines })
+    return
   }
 
   if (tag === 'p' || tag === 'div' || tag === 'span') {
-    const inlines = collectInlinesWithCodeSplit(elem, ctx)
-    if (inlinesBlank(inlines)) return []
-    return [blockParagraph(inlines)]
+    const inlines: Inline[] = []
+    collectInlinesWithCodeSplit(elem, ctx, inlines)
+    if (inlines.length) out.push({ type: 'paragraph', content: inlines })
+    return
   }
 
-  // Default: process with code split, wrap in paragraph
-  const inlines = collectInlinesWithCodeSplit(elem, ctx)
-  if (inlinesBlank(inlines)) return []
-  return [blockParagraph(inlines)]
+  const inlines: Inline[] = []
+  collectInlinesWithCodeSplit(elem, ctx, inlines)
+  if (inlines.length) out.push({ type: 'paragraph', content: inlines })
 }
 
-function convertChildren(elem: ElementLike, ctx: Context): Block[] {
-  const blocks: Block[] = []
+function convertChildren(elem: ElementLike, ctx: Context, out: Block[]): void {
   for (const child of elem.childNodes) {
-    const converted = convertNode(child, ctx)
-    for (let i = 0; i < converted.length; i++) {
-      blocks.push(converted[i])
-    }
+    convertNode(child, ctx, out)
   }
-  return blocks
 }
 
 // ---- lists ----
@@ -401,8 +459,9 @@ function collectListItems(elem: ElementLike, ctx: Context): ListItem[] {
       if (hasBlocks) {
         blocks = collectContentWithInlineMerge(child, ctx)
       } else {
-        const inlines = collectInlines(child, ctx)
-        blocks = inlinesBlank(inlines) ? [] : [blockParagraph(inlines)]
+        const inlines: Inline[] = []
+        collectInlines(child, ctx, inlines)
+        blocks = inlines.length && !inlinesBlank(inlines) ? [{ type: 'paragraph', content: inlines }] : []
       }
       items.push({ blocks })
     }
@@ -424,12 +483,12 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
       if (isBlockTag(el.localName) && el.localName !== 'li') {
         flushPendingInline(blocks, pending)
         pending = null
-        blocks.push(...convertElement(el, ctx))
+        convertElement(el, ctx, blocks)
       } else {
-        const result = convertInline(el, ctx)
-        if (result && result.length > 0) {
+        const inner: Inline[] = []
+        if (convertInline(el, ctx, inner)) {
           if (!pending) pending = []
-          pending.push(...result)
+          for (let i = 0; i < inner.length; i++) pending.push(inner[i])
         }
       }
     } else {
@@ -452,7 +511,7 @@ function hasBlockChildrenExceptLi(elem: ElementLike): boolean {
 
 // ---- tables ----
 
-function convertTable(elem: ElementLike, ctx: Context): Block[] {
+function convertTable(elem: ElementLike, ctx: Context, out: Block[]): void {
   const headers: Inline[][] = []
   const rows: Inline[][][] = []
 
@@ -477,14 +536,14 @@ function convertTable(elem: ElementLike, ctx: Context): Block[] {
     readRow(tr, headers, rows, ctx)
   }
 
-  // If no headers, promote first row
   if (!headers.length && rows.length) {
     const first = rows.shift()!
-    headers.push(...first)
+    for (let i = 0; i < first.length; i++) headers.push(first[i])
   }
 
-  if (!headers.length && !rows.length) return []
-  return [{ type: 'table', headers, rows }]
+  if (headers.length || rows.length) {
+    out.push({ type: 'table', headers, rows })
+  }
 }
 
 function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: Context): void {
@@ -492,12 +551,14 @@ function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: 
   let hadHeader = false
   for (const cell of tr.children) {
     const t = cell.localName
-    if (t === 'th') { hadHeader = true; row.push(collectInlines(cell, ctx)) }
-    else if (t === 'td') { row.push(collectInlines(cell, ctx)) }
+    const cellInlines: Inline[] = []
+    collectInlines(cell, ctx, cellInlines)
+    if (t === 'th') { hadHeader = true; row.push(cellInlines) }
+    else if (t === 'td') { row.push(cellInlines) }
   }
   if (!row.length) return
   if (hadHeader && !headers.length) {
-    headers.push(...row)
+    for (let i = 0; i < row.length; i++) headers.push(row[i])
   } else {
     rows.push(row)
   }

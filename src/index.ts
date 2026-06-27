@@ -1,4 +1,4 @@
-import type { HtmlToMdOptions, ElementLike } from './options.ts'
+import type { HtmlToMdOptions, ElementLike, Block } from './options.ts'
 import {
   HOIST_IMAGES,
   HOIST_LINKS,
@@ -23,7 +23,8 @@ export type { HtmlToMdOptions }
 export function htmlToMd(input: ElementLike, options?: HtmlToMdOptions): string {
   const opts = resolveOptions(options)
   const ctx = makeCtx(opts)
-  const blocks = convertChildren(input, ctx)
+  const blocks: Block[] = []
+  convertChildren(input, ctx, blocks)
   let result = serializeBlocks(blocks, opts, 0)
   result = collapseTrim(result)
   result = postProcess(result)

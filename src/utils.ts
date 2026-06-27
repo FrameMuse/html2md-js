@@ -112,29 +112,91 @@ export function hasLinkChildren(elem: ElementLike): boolean {
 export function isInlineBlank(i: Inline): boolean {
   switch (i.type) {
     case 'text': return !i.text || !i.text.trim()
-    case 'strong': case 'emphasis': case 'highlight': return !i.children || i.children.every(isInlineBlank)
+    case 'strong': case 'emphasis': case 'highlight': {
+      if (!i.children) return true
+      for (let j = 0; j < i.children.length; j++) {
+        if (!isInlineBlank(i.children[j])) return false
+      }
+      return true
+    }
     case 'code': return !i.text
-    case 'link': return !i.children || i.children.every(isInlineBlank)
+    case 'link': {
+      if (!i.children) return true
+      for (let j = 0; j < i.children.length; j++) {
+        if (!isInlineBlank(i.children[j])) return false
+      }
+      return true
+    }
     case 'image': return false
     case 'linebreak': return false
   }
 }
 
 export function inlinesBlank(inlines: Inline[]): boolean {
-  return inlines.every(isInlineBlank)
+  for (let i = 0; i < inlines.length; i++) {
+    if (!isInlineBlank(inlines[i])) return false
+  }
+  return true
+}
+
+function anyInlineBlank(inlines: Inline[]): boolean {
+  for (let i = 0; i < inlines.length; i++) {
+    if (isInlineBlank(inlines[i])) return true
+  }
+  return false
 }
 
 export function isBlockBlank(block: Block): boolean {
   switch (block.type) {
-    case 'document': return block.children?.every(isBlockBlank) ?? true
-    case 'paragraph': return block.content?.every(isInlineBlank) ?? true
-    case 'heading': return block.content?.every(isInlineBlank) ?? true
-    case 'blockquote': return block.children?.every(isBlockBlank) ?? true
-    case 'list': return block.items?.every(i => i.blocks.every(isBlockBlank)) ?? true
+    case 'document': {
+      if (!block.children) return true
+      for (let i = 0; i < block.children.length; i++) {
+        if (!isBlockBlank(block.children[i])) return false
+      }
+      return true
+    }
+    case 'paragraph': {
+      if (!block.content) return true
+      return inlinesBlank(block.content)
+    }
+    case 'heading': {
+      if (!block.content) return true
+      return inlinesBlank(block.content)
+    }
+    case 'blockquote': {
+      if (!block.children) return true
+      for (let i = 0; i < block.children.length; i++) {
+        if (!isBlockBlank(block.children[i])) return false
+      }
+      return true
+    }
+    case 'list': {
+      if (!block.items) return true
+      for (let i = 0; i < block.items.length; i++) {
+        const item = block.items[i]
+        if (!item.blocks || !item.blocks.length) continue
+        for (let j = 0; j < item.blocks.length; j++) {
+          if (!isBlockBlank(item.blocks[j])) return false
+        }
+      }
+      return true
+    }
     case 'codeblock': return !block.code?.trim()
     case 'table':
-      return (block.headers?.every(h => h.every(isInlineBlank)) ?? true)
-        && (block.rows?.every(r => r.every(c => c.every(isInlineBlank))) ?? true)
+      if (block.headers) {
+        for (let i = 0; i < block.headers.length; i++) {
+          if (!inlinesBlank(block.headers[i])) return false
+        }
+      }
+      if (block.rows) {
+        for (let i = 0; i < block.rows.length; i++) {
+          const row = block.rows[i]
+          for (let j = 0; j < row.length; j++) {
+            if (!inlinesBlank(row[j])) return false
+          }
+        }
+      }
+      return true
     case 'hr': return false
   }
 }
