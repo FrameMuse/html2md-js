@@ -24,8 +24,14 @@ export function escapeMarkdown(text: string): string {
   return out
 }
 
+const FAST_REGEX = /([\\*_`\[\]{}()#+\-\.!])/g
+
 export function escapeMarkdownWithReplace(text: string): string {
   return text.replace(/([\\*_`\[\]{}()#+\-\.!])/g, '\\$1')
+}
+
+export function escapeMarkdownFastRegex(text: string): string {
+  return text.replace(FAST_REGEX, '\\$1')
 }
 
 const ESCAPE_RE = /[\\*_`\[\]{}()#+\-\.!]/g
@@ -34,12 +40,12 @@ export function escapeMarkdownWithMatchAll(text: string): string {
   let out = ''
   let last = 0
   for (const match of text.matchAll(ESCAPE_RE)) {
-    out += text.slice(last, match.index)
+    out += text.substring(last, match.index)
     out += '\\'
     out += match[0]
     last = match.index + 1
   }
-  out += text.slice(last)
+  out += text.substring(last)
   return out
 }
 
@@ -49,12 +55,12 @@ export function escapeMarkdownWithExec(text: string): string {
   let match: RegExpExecArray | null
   ESCAPE_RE.lastIndex = 0
   while ((match = ESCAPE_RE.exec(text)) !== null) {
-    out += text.slice(last, match.index)
+    out += text.substring(last, match.index)
     out += '\\'
     out += match[0]
     last = match.index + 1
   }
-  out += text.slice(last)
+  out += text.substring(last)
   return out
 }
 
@@ -72,7 +78,7 @@ export function escapeMarkdownSuperFast(text: string): string {
     const code = text.charCodeAt(i)
     if (code < 128 && ESCAPE_TABLE[code] === 1) {
       if (i > lastIndex) {
-        out += text.slice(lastIndex, i)
+        out += text.substring(lastIndex, i)
       }
       out += '\\' + text[i]
       lastIndex = i + 1
@@ -80,7 +86,7 @@ export function escapeMarkdownSuperFast(text: string): string {
   }
 
   if (lastIndex < len) {
-    out += text.slice(lastIndex)
+    out += text.substring(lastIndex)
   }
 
   return out || text
