@@ -1,34 +1,37 @@
 $ bun benchmarks/conversion.ts && bun benchmarks/escape.ts && bun benchmarks/internal.ts
 Element input (pre-parsed DOM)
-  [019.798µs] [fastest]  page (0.6K)
-  [023.329µs] [+1.18x]   page +full opts
-  [131.949µs] [+6.66x]   prereqs (24.8K)
-  [151.150µs] [+7.63x]   prereqs +full opts
-  [001.253ms] [+63.27x]  figma (96.1K)
-  [002.870ms] [+144.95x] figma +full opts
+  [024.005µs] [+1.25x]   page (0.6K)
+  [019.196µs] [fastest]  page +full opts
+  [128.933µs] [+6.72x]   prereqs (24.8K)
+  [130.296µs] [+6.79x]   prereqs +full opts
+  [003.268ms] [+170.23x] figma (96.1K)
+  [001.598ms] [+83.26x]  figma +full opts
 Option breakdown (figma 96.1K)
-  [001.572ms] [+1.40x]  default
-  [001.178ms] [+1.05x]  codeBy only
-  [001.126ms] [fastest] hoist only
-  [001.153ms] [+1.02x]  skip only
+  [001.092ms] [fastest] default
+  [001.109ms] [+1.02x]  codeBy only
+  [001.105ms] [+1.01x]  hoist only
+  [001.269ms] [+1.16x]  skip only
 Synthetic: admonitions x50
-  [341.000ns] [fastest] element
+  [370.000ns] [fastest] element
 Synthetic: 10x10 table
-  [251.000ns] [fastest] element
+  [261.000ns] [fastest] element
 Synthetic: code-by x100
-  [361.000ns] [fastest] element
-escapeMarkdown: 3 variants  (0% special chars)
-  [168.879µs] [+351.10x] loop (Set.has)
-  [481.000ns] [fastest]  regex (.replace)
-  [992.000ns] [+2.06x]   matchAll (manual build)
-escapeMarkdown: 3 variants  (5% special chars)
-  [029.055µs] [fastest] loop (Set.has)
-  [051.247µs] [+1.76x]  regex (.replace)
-  [042.410µs] [+1.46x]  matchAll (manual build)
-escapeMarkdown: 3 variants  (50% special chars)
-  [040.671µs] [fastest] loop (Set.has)
-  [349.850µs] [+8.60x]  regex (.replace)
-  [236.065µs] [+5.80x]  matchAll (manual build)
+  [370.000ns] [fastest] element
+escapeMarkdown: 4 variants  (0% special chars)
+  [081.765µs] [+169.99x] loop (Set.has)
+  [481.000ns] [+1.00x]   regex (.replace)
+  [001.002µs] [+2.08x]   matchAll (for..of)
+  [481.000ns] [fastest]  exec (while loop)
+escapeMarkdown: 4 variants  (5% special chars)
+  [029.115µs] [fastest] loop (Set.has)
+  [051.157µs] [+1.76x]  regex (.replace)
+  [042.470µs] [+1.46x]  matchAll (for..of)
+  [035.186µs] [+1.21x]  exec (while loop)
+escapeMarkdown: 4 variants  (50% special chars)
+  [040.958µs] [fastest] loop (Set.has)
+  [350.330µs] [+8.55x]  regex (.replace)
+  [247.276µs] [+6.04x]  matchAll (for..of)
+  [215.066µs] [+5.25x]  exec (while loop)
 collapseWhitespace / collapseTrim
-  [080.411µs] [fastest] collapseWhitespace
-  [177.735µs] [+2.21x]  collapseTrim
+  [082.896µs] [fastest] collapseWhitespace
+  [166.849µs] [+2.01x]  collapseTrim

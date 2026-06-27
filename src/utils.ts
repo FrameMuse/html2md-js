@@ -43,6 +43,21 @@ export function escapeMarkdownWithMatchAll(text: string): string {
   return out
 }
 
+export function escapeMarkdownWithExec(text: string): string {
+  let out = ''
+  let last = 0
+  let match: RegExpExecArray | null
+  ESCAPE_RE.lastIndex = 0
+  while ((match = ESCAPE_RE.exec(text)) !== null) {
+    out += text.slice(last, match.index)
+    out += '\\'
+    out += match[0]
+    last = match.index + 1
+  }
+  out += text.slice(last)
+  return out
+}
+
 export function collapseWhitespace(s: string): string {
   let out = ''
   let prevSpace = false
