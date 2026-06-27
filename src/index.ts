@@ -4,6 +4,11 @@ export const HOIST_LINKS = 1 << 1
 export const SkipFlags = {
   NONE: 0,
   ARIA_HIDDEN: 1 << 0,
+  HEADER: 1 << 1,
+  FOOTER: 1 << 2,
+  ASIDE: 1 << 3,
+  NAV: 1 << 4,
+  MENU: 1 << 5,
 } as const
 
 export interface HtmlToMdOptions {
@@ -60,6 +65,7 @@ const SKIP_TAGS = new Set([
   'script', 'style', 'noscript', 'template',
   'form', 'fieldset',
   'button', 'input', 'select', 'textarea', 'option',
+  'head',
 ])
 
 const CONTAINER_TAGS = new Set([
@@ -381,9 +387,9 @@ function convertInline(elem: Element, ctx: Context): InlineResult | null {
     const href = elem.getAttribute('href') ?? ''
     const title = elem.getAttribute('title') ?? undefined
     const content = collectInlines(elem, ctx)
+    if (content.every(i => isInlineBlank(i))) return null
     if (!href && !title) {
-      // No link target, return content as plain inline
-      return content.length ? content : null
+      return content
     }
     return [{ type: 'link', children: content, url: href, title }]
   }
@@ -499,6 +505,16 @@ function convertElement(elem: Element, ctx: Context): Block[] {
   if (isSkipTag(tag)) return []
 
   if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute('aria-hidden') === 'true') return []
+
+  const SKIP_TAG_FLAGS: Record<string, number> = {
+    header: SkipFlags.HEADER,
+    footer: SkipFlags.FOOTER,
+    aside: SkipFlags.ASIDE,
+    nav: SkipFlags.NAV,
+    menu: SkipFlags.MENU,
+  }
+  const tagFlag = SKIP_TAG_FLAGS[tag]
+  if (tagFlag !== undefined && (ctx.options.skip & tagFlag)) return []
 
   // code-by matched element
   if (matchesCodeBy(elem, ctx.options.codeBy)) {

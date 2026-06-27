@@ -351,16 +351,68 @@ describe("link hoisting", () => {
 });
 
 describe("skip flags", () => {
-  test("aria-hidden elements skipped with SkipFlags.ARIA_HIDDEN", () => {
+  test("block-level aria-hidden skipped", () => {
     expect(htmlToMd(
       '<p>Visible</p><div aria-hidden="true"><p>Hidden</p></div>',
       { skip: SkipFlags.ARIA_HIDDEN },
     )).toBe("Visible");
   });
 
+  test("inline-level aria-hidden skipped (e.g. svg icon inside link)", () => {
+    expect(htmlToMd(
+      '<p>text <a href="/edit"><svg aria-hidden="true"><use href="#icon"></use></svg>Edit</a></p>',
+      { skip: SkipFlags.ARIA_HIDDEN },
+    )).toBe("text [Edit](/edit)");
+  });
+
+  test("inline aria-hidden alone produces empty anchor (no content)", () => {
+    expect(htmlToMd(
+      '<p>text <a href="/edit"><svg aria-hidden="true"><use href="#icon"></use></svg></a></p>',
+      { skip: SkipFlags.ARIA_HIDDEN },
+    )).toBe("text ");
+  });
+
+  test("aria-hidden inside table cell skipped", () => {
+    expect(htmlToMd(
+      '<table><tr><td>Keep <svg aria-hidden="true"><use href="#x"></use></svg> this</td></tr></table>',
+      { skip: SkipFlags.ARIA_HIDDEN },
+    )).toBe("| Keep  this |\n| --- |");
+  });
+
   test("aria-hidden elements preserved without skip flag", () => {
     expect(htmlToMd(
       '<div aria-hidden="true"><p>Hidden</p></div>',
     )).toBe("Hidden");
+  });
+
+  test("header skipped with SkipFlags.HEADER", () => {
+    expect(htmlToMd("<header>Brand</header><p>Body</p>", { skip: SkipFlags.HEADER })).toBe("Body");
+  });
+
+  test("footer skipped with SkipFlags.FOOTER", () => {
+    expect(htmlToMd("<p>Body</p><footer>Copyright</footer>", { skip: SkipFlags.FOOTER })).toBe("Body");
+  });
+
+  test("aside skipped with SkipFlags.ASIDE", () => {
+    expect(htmlToMd("<aside>Sidebar</aside><p>Main</p>", { skip: SkipFlags.ASIDE })).toBe("Main");
+  });
+
+  test("nav skipped with SkipFlags.NAV", () => {
+    expect(htmlToMd("<nav>Links</nav><p>Content</p>", { skip: SkipFlags.NAV })).toBe("Content");
+  });
+
+  test("menu skipped with SkipFlags.MENU", () => {
+    expect(htmlToMd("<menu><li>Item</li></menu><p>Body</p>", { skip: SkipFlags.MENU })).toBe("Body");
+  });
+
+  test("tags preserved without skip flag", () => {
+    expect(htmlToMd("<header>Brand</header><p>Body</p>")).toBe("Brand\n\nBody");
+  });
+
+  test("multiple skip flags combined", () => {
+    expect(htmlToMd(
+      "<header>H</header><nav>N</nav><p>Body</p><footer>F</footer>",
+      { skip: SkipFlags.HEADER | SkipFlags.FOOTER | SkipFlags.NAV },
+    )).toBe("Body");
   });
 });
