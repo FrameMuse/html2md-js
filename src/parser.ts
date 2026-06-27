@@ -8,6 +8,8 @@ import {
   SkipFlags,
   TEXT_NODE,
 } from './options'
+import { RE_SPLIT_WS } from './regexps'
+
 import {
   admonitionType,
   collapseWhitespace,
@@ -48,12 +50,12 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
 
 function propagateLanguage(pre: ElementLike): void {
   const preClass = pre.getAttribute?.('class') ?? ''
-  const lang = preClass.split(/\s+/).find(s => s.startsWith('language-'))
+  const lang = preClass.split(RE_SPLIT_WS).find(s => s.startsWith('language-'))
   if (!lang) return
   for (const child of pre.children) {
     if (child.localName === 'code') {
       const existing = child.getAttribute?.('class') ?? ''
-      if (!existing.split(/\s+/).includes(lang)) {
+      if (!existing.split(RE_SPLIT_WS).includes(lang)) {
         child.setAttribute?.('class', existing ? `${existing} ${lang}` : lang)
       }
     }

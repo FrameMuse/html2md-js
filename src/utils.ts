@@ -9,9 +9,17 @@ import {
   BLOCK_TAGS,
   ELEMENT_NODE,
   TEXT_NODE
-} from './options';
+} from './options'
+import {
+  RE_ESCAPE,
+  RE_WS,
+  RE_SPLIT_WS,
+  RE_TRIM_NEWLINES,
+  RE_COLLAPSE_NEWLINES,
+  RE_EMPTY_ANCHOR,
+  RE_UNESCAPE_HYPHEN,
+} from './regexps'
 
-const _ESCAPE_TEST = /[\\*_`\[\]{}()#+\-\.!]/
 const _ESCAPE_TABLE = new Uint8Array(128);
 [92, 42, 95, 96, 91, 93, 123, 125, 40, 41, 35, 43, 45, 46, 33].forEach(code => {
   _ESCAPE_TABLE[code] = 1
@@ -22,7 +30,7 @@ const _SRC_BUF = new Uint8Array(65536)
 const _DST_BUF = new Uint8Array(65536 * 2)
 
 export function escapeMarkdown(text: string): string {
-  if (!_ESCAPE_TEST.test(text)) return text
+  if (!RE_ESCAPE.test(text)) return text
   const encoded = _ENCODER.encodeInto(text, _SRC_BUF)
   const srcLen = encoded.written
   let destIdx = 0
@@ -38,10 +46,9 @@ export function escapeMarkdown(text: string): string {
 
 const _WS_TABLE = new Uint8Array(128);
 [32, 10, 13, 9].forEach(code => { _WS_TABLE[code] = 1 })
-const _WS_TEST = /\s/
 
 export function collapseWhitespace(s: string): string {
-  if (!_WS_TEST.test(s)) return s
+  if (!RE_WS.test(s)) return s
   const encoded = _ENCODER.encodeInto(s, _SRC_BUF)
   const srcLen = encoded.written
   let destIdx = 0
@@ -61,7 +68,7 @@ export function collapseWhitespace(s: string): string {
 export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {
   const tag = elem.localName
   const rawCls = elem.getAttribute?.('class')
-  const classes = rawCls ? rawCls.split(/\s+/) : null
+  const classes = rawCls ? rawCls.split(RE_SPLIT_WS) : null
   return rules.some(r => {
     if (r.tag && tag !== r.tag) return false
     if (r.class && (!classes || !classes.includes(r.class))) return false
@@ -80,7 +87,7 @@ const ADMONITION_MAP: Record<string, string> = {
 }
 
 export function admonitionType(cls: string): string | null {
-  for (const token of cls.split(/\s+/)) {
+  for (const token of cls.split(RE_SPLIT_WS)) {
     const mapped = ADMONITION_MAP[token]
     if (mapped) return mapped
   }
@@ -224,7 +231,7 @@ export function getCodeText(elem: ElementLike): string {
 
 export function extractLanguage(elem: ElementLike): string | undefined {
   const cls = elem.getAttribute?.('class') ?? ''
-  const lang = cls.split(/\s+/).find(s => s.startsWith('language-'))
+  const lang = cls.split(RE_SPLIT_WS).find(s => s.startsWith('language-'))
   return lang ? lang.slice(9) : undefined
 }
 
@@ -235,12 +242,12 @@ export function flushPendingInline(blocks: Block[], pending: Inline[] | null) {
 }
 
 export function collapseTrim(s: string): string {
-  return s.replace(/^[\n]+|[\n]+$/g, '').replace(/\n{3,}/g, '\n\n')
+  return s.replace(RE_TRIM_NEWLINES, '').replace(RE_COLLAPSE_NEWLINES, '\n\n')
 }
 
 export function postProcess(md: string): string {
-  md = md.replace(/\s*\[​\]\(#[^)]+\)/g, '')
-  md = md.replace(/\\-/g, '-')
+  md = md.replace(RE_EMPTY_ANCHOR, '')
+  md = md.replace(RE_UNESCAPE_HYPHEN, '-')
   return md
 }
 
