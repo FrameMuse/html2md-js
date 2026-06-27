@@ -58,6 +58,34 @@ export function escapeMarkdownWithExec(text: string): string {
   return out
 }
 
+const ESCAPE_TABLE = new Uint8Array(128);
+[92, 42, 95, 96, 91, 93, 123, 125, 40, 41, 35, 43, 45, 46, 33].forEach(code => {
+  ESCAPE_TABLE[code] = 1
+})
+
+export function escapeMarkdownSuperFast(text: string): string {
+  const len = text.length
+  let out = ''
+  let lastIndex = 0
+
+  for (let i = 0; i < len; i++) {
+    const code = text.charCodeAt(i)
+    if (code < 128 && ESCAPE_TABLE[code] === 1) {
+      if (i > lastIndex) {
+        out += text.slice(lastIndex, i)
+      }
+      out += '\\' + text[i]
+      lastIndex = i + 1
+    }
+  }
+
+  if (lastIndex < len) {
+    out += text.slice(lastIndex)
+  }
+
+  return out || text
+}
+
 export function collapseWhitespace(s: string): string {
   let out = ''
   let prevSpace = false
