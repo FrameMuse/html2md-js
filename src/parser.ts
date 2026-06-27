@@ -24,6 +24,9 @@ import {
   matchesCodeBy
 } from './utils'
 
+const INLINE_CONTAINERS = new Set(['span', 'small', 'mark', 'abbr', 'cite', 'q', 'sub', 'sup', 'time'])
+const INLINE_ELEMENTS = new Set(['a', 'strong', 'b', 'em', 'i', 'code', 'span', 'img', 'br'])
+
 // ---- admonition detection ----
 
 function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: Block[]): void {
@@ -222,7 +225,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
   }
 
   // pass-through inline containers
-  if (['span', 'small', 'mark', 'abbr', 'cite', 'q', 'sub', 'sup', 'time'].includes(tag)) {
+  if (INLINE_CONTAINERS.has(tag)) {
     collectInlines(elem, ctx, out)
     return true
   }
@@ -399,7 +402,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   }
 
   // inline elements at block level
-  if (['a', 'strong', 'b', 'em', 'i', 'code', 'span', 'img', 'br'].includes(tag)) {
+  if (INLINE_ELEMENTS.has(tag)) {
     const inlines: Inline[] = []
     if (convertInline(elem, ctx, inlines)) {
       out.push({ type: 'paragraph', content: inlines })
