@@ -2,7 +2,6 @@ import {
   type Inline,
   type Block,
   type ListItem,
-  type Context,
   type ResolvedOptions,
   type CodeByRule,
   BLOCK_TAGS,
@@ -10,7 +9,6 @@ import {
   CONTAINER_TAGS,
   ELEMENT_NODE,
   TEXT_NODE,
-  SkipFlags,
 } from './options.ts'
 
 const ESCAPE_CHARS = new Set(['\\', '*', '_', '[', ']', '#', '+', '-', '!', '`'])
@@ -59,33 +57,6 @@ export function matchesCodeBy(elem: Element, rules: CodeByRule[]): boolean {
     if (r.class && (!classes || !classes.includes(r.class))) return false
     return true
   })
-}
-
-type HtmlParser = (html: string) => any
-
-let _parseHtml: HtmlParser | undefined | null
-
-try {
-  const { DOMParser } = await import('linkedom')
-  const parser = new DOMParser()
-  _parseHtml = (html: string) => {
-    const trimmed = html.trimStart()
-    const isFullDoc = trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')
-    if (!isFullDoc) {
-      html = '<html><body>' + html + '</body></html>'
-    }
-    return parser.parseFromString(html, 'text/html')
-  }
-} catch {
-  _parseHtml = null
-}
-
-export function ensureParser(): HtmlParser {
-  if (!_parseHtml) throw new Error(
-    'html2md-js: string input requires linkedom. ' +
-    'Install: npm install linkedom, or pass an Element directly.'
-  )
-  return _parseHtml
 }
 
 const ADMONITION_MAP: Record<string, string> = {

@@ -1,53 +1,56 @@
-import { describe, test, expect, beforeAll } from "bun:test";
-import { readFileSync } from "fs";
-import { htmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts";
+import { describe, test, expect, beforeAll } from "bun:test"
+import { readFileSync } from "fs"
+import { htmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
+import { DOMParser } from "linkedom"
 
-const FIXTURES = "tests/fixtures";
+const parser = new DOMParser()
+const FIXTURES = "tests/fixtures"
 
-let docHtml: string;
-let updateHtml: string;
+let docHtml: string
+let updateHtml: string
+
+function parse(html: string): Document {
+  return parser.parseFromString(html, "text/html")
+}
 
 beforeAll(() => {
-  docHtml = readFileSync(`${FIXTURES}/prerequisites.html`, "utf-8");
-  updateHtml = readFileSync(`${FIXTURES}/update-1.html`, "utf-8");
-});
+  docHtml = readFileSync(`${FIXTURES}/prerequisites.html`, "utf-8")
+  updateHtml = readFileSync(`${FIXTURES}/update-1.html`, "utf-8")
+})
 
 describe("full page snapshots", () => {
   test("prerequisites page", () => {
-    const { DOMParser } = require("linkedom");
-    const doc = new DOMParser().parseFromString(docHtml, "text/html");
-    const el = doc.querySelector("div.theme-doc-markdown.markdown");
-    if (!el) throw new Error("selector not found");
+    const doc = parse(docHtml)
+    const el = doc.querySelector("div.theme-doc-markdown.markdown")
+    if (!el) throw new Error("selector not found")
     const result = htmlToMd(el, {
       codeBy: ["h3.property", ".sig"],
-    });
-    expect(result).toMatchSnapshot();
-  });
+    })
+    expect(result).toMatchSnapshot()
+  })
 
   test("update-1 page", () => {
-    const { DOMParser } = require("linkedom");
-    const doc = new DOMParser().parseFromString(updateHtml, "text/html");
+    const doc = parse(updateHtml)
     const el =
       doc.querySelector("div.theme-doc-markdown.markdown") ??
-      doc.querySelector("div#__blog-post-container.markdown");
-    if (!el) throw new Error("selector not found");
-    const result = htmlToMd(el);
-    expect(result).toMatchSnapshot();
-  });
+      doc.querySelector("div#__blog-post-container.markdown")
+    if (!el) throw new Error("selector not found")
+    const result = htmlToMd(el)
+    expect(result).toMatchSnapshot()
+  })
 
   test("figma manifest page", () => {
-    const html = readFileSync(`${FIXTURES}/figma-manifest.html`, "utf-8");
-    const { DOMParser } = require("linkedom");
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const el = doc.querySelector("div.theme-doc-markdown.markdown");
-    if (!el) throw new Error("selector not found");
+    const html = readFileSync(`${FIXTURES}/figma-manifest.html`, "utf-8")
+    const doc = parse(html)
+    const el = doc.querySelector("div.theme-doc-markdown.markdown")
+    if (!el) throw new Error("selector not found")
     const result = htmlToMd(el, {
       flags: HOIST_IMAGES | HOIST_LINKS,
       skip: SkipFlags.ARIA_HIDDEN,
       codeBy: ["h3.property", ".sig"],
-    });
-    expect(result).toMatchSnapshot();
-  });
+    })
+    expect(result).toMatchSnapshot()
+  })
 
   test("kitchen sink (all features)", () => {
     const html = `<!doctype html><html><body>
@@ -80,11 +83,10 @@ console.log(x);</code></pre>
         <p>Figure body text.</p>
       </figure>
       <address>Author Name</address>
-    </body></html>`;
+    </body></html>`
 
-    const { DOMParser } = require("linkedom");
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const result = htmlToMd(doc.body);
-    expect(result).toMatchSnapshot();
-  });
-});
+    const doc = parse(html)
+    const result = htmlToMd(doc.body)
+    expect(result).toMatchSnapshot()
+  })
+})

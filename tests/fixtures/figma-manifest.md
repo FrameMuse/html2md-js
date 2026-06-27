@@ -5,7 +5,19 @@ Each plugin must define a `manifest.json` file that describes the plugin. If you
 Example:
 
 ```json
-{  "name": "MyPlugin",  "id": "737805260747778092",  "api": "1.0.0",  "editorType": ["figma", "figjam"],  "main": "code.js",  "ui": "ui.html",  "documentAccess": "dynamic-page",  "networkAccess": {    "allowedDomains": ["none"]  }}
+{
+  "name": "MyPlugin",
+  "id": "737805260747778092",
+  "api": "1.0.0",
+  "editorType": ["figma", "figjam"],
+  "main": "code.js",
+  "ui": "ui.html",
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  }
+}
+
 ```
 
 ### `name: string`
@@ -95,13 +107,31 @@ Valid patterns for `allowedDomains` and `devAllowedDomains`:
 For example:
 
 ```json
-"networkAccess": {  "allowedDomains": [    "figma.com",    "*.google.com",    "https://my-app.cdn.com",    "wss://socket.io",    "example.com/api/",    "exact-path.com/content"  ],  "devAllowedDomains": [    "http://localhost:3000"  ]}
+"networkAccess": {
+  "allowedDomains": [
+    "figma.com",
+    "*.google.com",
+    "https://my-app.cdn.com",
+    "wss://socket.io",
+    "example.com/api/",
+    "exact-path.com/content"
+  ],
+  "devAllowedDomains": [
+    "http://localhost:3000"
+  ]
+}
+
 ```
 
 More formally,
 
 ```ts
-interface NetworkAccess {  allowedDomains: string[]  reasoning?: string  devAllowedDomains: string[]}
+interface NetworkAccess {
+  allowedDomains: string[]
+  reasoning?: string
+  devAllowedDomains: string[]
+}
+
 ```
 
 ---
@@ -111,7 +141,27 @@ interface NetworkAccess {  allowedDomains: string[]  reasoning?: string  devAllo
 Used to specify the list of parameters that your plugin accepts as input. Can also be defined on [menu items][ref4]. Here's an example:
 
 ```json
-"parameters": [  {    "name": "Icon name",    "key": "icon-name",    "description": "Enter the name of the icon you want to insert."  },  {    "name": "Size",    "key": "size",    "description": "Enter the size of the icon you want to insert.",    "allowFreeform": true  },  {    "name": "Color",    "key": "color",    "description": "Enter the color of the icon you want to insert.",    "allowFreeform": true,    "optional": true  }]
+"parameters": [
+  {
+    "name": "Icon name",
+    "key": "icon-name",
+    "description": "Enter the name of the icon you want to insert."
+  },
+  {
+    "name": "Size",
+    "key": "size",
+    "description": "Enter the size of the icon you want to insert.",
+    "allowFreeform": true
+  },
+  {
+    "name": "Color",
+    "key": "color",
+    "description": "Enter the color of the icon you want to insert.",
+    "allowFreeform": true,
+    "optional": true
+  }
+]
+
 ```
 
 Each parameter has the following properties:
@@ -125,7 +175,14 @@ Each parameter has the following properties:
 More formally,
 
 ```ts
-interface Parameter {  name: string  key: string  description?: string  allowFreeform?: boolean  optional?: boolean}
+interface Parameter {
+  name: string
+  key: string
+  description?: string
+  allowFreeform?: boolean
+  optional?: boolean
+}
+
 ```
 
 ---
@@ -156,6 +213,7 @@ The following value is unsupported:
 
 ```json
 "editorType": ["figjam", "dev"]
+
 ```
 
 ---
@@ -167,7 +225,19 @@ This allows you to specify a submenu for your plugin, enabling the plugin to con
 The `menu` property contains a nested list of menu items, menu separators and submenus to be displayed. Here's an example:
 
 ```json
-"menu": [  {"name": "Create Text", "command": "text"},  {"name": "Create Frame", "command": "frame"},  {"separator": true},  {"name": "Create Shape",   "menu": [     {"name": "Create Circle", "command": "circle"},     {"separator": true},     {"name": "Create Rectangle", "command": "rectangle"}   ]  }]
+"menu": [
+  {"name": "Create Text", "command": "text"},
+  {"name": "Create Frame", "command": "frame"},
+  {"separator": true},
+  {"name": "Create Shape",
+   "menu": [
+     {"name": "Create Circle", "command": "circle"},
+     {"separator": true},
+     {"name": "Create Rectangle", "command": "rectangle"}
+   ]
+  }
+]
+
 ```
 
 Each item in the `menu` property must be one of the following three:
@@ -179,7 +249,14 @@ Each item in the `menu` property must be one of the following three:
 More formally,
 
 ```ts
-type ManifestMenuItem =  // Clickable menu item.  { name: string, command: string, parameters?: ParameterList[], parameterOnly?: boolean } |  // Separator  { separator: true } |  // Submenu  { name: string, menu: ManifestMenuItem[] }
+type ManifestMenuItem =
+  // Clickable menu item.
+  { name: string, command: string, parameters?: ParameterList[], parameterOnly?: boolean } |
+  // Separator
+  { separator: true } |
+  // Submenu
+  { name: string, menu: ManifestMenuItem[] }
+
 ```
 
 ---
@@ -191,7 +268,11 @@ This configures the relaunch buttons that are set via the [`setRelaunchData`][re
 Example:
 
 ```json
-"relaunchButtons": [  {"command": "edit", "name": "Edit shape"},  {"command": "open", "name": "Open Shaper", "multipleSelection": true}]
+"relaunchButtons": [
+  {"command": "edit", "name": "Edit shape"},
+  {"command": "open", "name": "Open Shaper", "multipleSelection": true}
+]
+
 ```
 
 Each relaunch button in the `relaunchButtons` array is an object with the following properties:
@@ -209,7 +290,12 @@ If multiple relaunch buttons are shown for a given node or selection of nodes, t
 More formally,
 
 ```ts
-type ManifestRelaunchButton = {  command: string  name: string  multipleSelection?: boolean}
+type ManifestRelaunchButton = {
+  command: string
+  name: string
+  multipleSelection?: boolean
+}
+
 ```
 
 ---
@@ -239,7 +325,13 @@ This allows you to specify what permissions your plugin wants access to.
 The possible `PluginPermissionType` are:
 
 ```ts
-type PluginPermissionType = "currentuser" | "activeusers" | "fileusers" | "payments" | "teamlibrary"
+type PluginPermissionType =
+ "currentuser" |
+ "activeusers" |
+ "fileusers" |
+ "payments" |
+ "teamlibrary"
+
 ```
 
 > [!NOTE]
@@ -279,7 +371,12 @@ A list of code languages that your plugin supports. This is required for codegen
 Example:
 
 ```json
-// Specify which languages the plugin supports."codegenLanguages": [  { label: "Tailwind", value: "tailwind" },  { label: "CSS", value: "css" },]
+// Specify which languages the plugin supports.
+"codegenLanguages": [
+  { label: "Tailwind", value: "tailwind" },
+  { label: "CSS", value: "css" },
+]
+
 ```
 
 ---
@@ -291,7 +388,40 @@ Used to specify a list of preferences for your codegen plugin, such as alternati
 Example:
 
 ```json
-"codegenPreferences": [  // Optional but a unit itemType can be used to specify that the plugin supports a custom scaled unit. By default, all plugins  // support the pixel unit.  {    "itemType": "unit",    "scaledUnit": "Rem",    "defaultScaleFactor": 16,    // Optional, if true the scaled unit is the default.    "default": true,    // Optional, if omitted, all languages are included.    "includedLanguages": []  },  {    "itemType": "select",    "propertyName": "tabSize",    "label": "Tab Size",    "options": [      {"label": "2", "value": "2", isDefault: true },      {"label": "4", "value": "4"},      {"label": "8", "value": "8"}    ],    // Optional, if omitted, all languages are included.    "includedLanguages": ["tailwind"]  },  {    "itemType": "action",    "propertyName": "showMore",    "label": "More settings..."    // Optional, if omitted, all languages are included.    "includedLanguages": ["tailwind"],  },]
+"codegenPreferences": [
+  // Optional but a unit itemType can be used to specify that the plugin supports a custom scaled unit. By default, all plugins
+  // support the pixel unit.
+  {
+    "itemType": "unit",
+    "scaledUnit": "Rem",
+    "defaultScaleFactor": 16,
+    // Optional, if true the scaled unit is the default.
+    "default": true,
+
+    // Optional, if omitted, all languages are included.
+    "includedLanguages": []
+  },
+  {
+    "itemType": "select",
+    "propertyName": "tabSize",
+    "label": "Tab Size",
+    "options": [
+      {"label": "2", "value": "2", isDefault: true },
+      {"label": "4", "value": "4"},
+      {"label": "8", "value": "8"}
+    ],
+    // Optional, if omitted, all languages are included.
+    "includedLanguages": ["tailwind"]
+  },
+  {
+    "itemType": "action",
+    "propertyName": "showMore",
+    "label": "More settings..."
+    // Optional, if omitted, all languages are included.
+    "includedLanguages": ["tailwind"],
+  },
+]
+
 ```
 
 ---
