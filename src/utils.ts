@@ -7,11 +7,9 @@ import {
   type NodeLike,
   type TextLike,
   BLOCK_TAGS,
-  CONTAINER_TAGS,
   ELEMENT_NODE,
-  SKIP_TAGS,
   TEXT_NODE
-} from './options'
+} from './options';
 
 const _ESCAPE_TEST = /[\\*_`\[\]{}()#+\-\.!]/
 const _ESCAPE_TABLE = new Uint8Array(128);
@@ -38,30 +36,26 @@ export function escapeMarkdown(text: string): string {
   return _DECODER.decode(_DST_BUF.subarray(0, destIdx))
 }
 
+const _WS_TABLE = new Uint8Array(128);
+[32, 10, 13, 9].forEach(code => { _WS_TABLE[code] = 1 })
+const _WS_TEST = /\s/
+
 export function collapseWhitespace(s: string): string {
-  let out = ''
+  if (!_WS_TEST.test(s)) return s
+  const encoded = _ENCODER.encodeInto(s, _SRC_BUF)
+  const srcLen = encoded.written
+  let destIdx = 0
   let prevSpace = false
-  for (const c of s) {
-    if (c === ' ' || c === '\n' || c === '\t' || c === '\r') {
-      if (!prevSpace) { out += ' '; prevSpace = true }
+  for (let i = 0; i < srcLen; i++) {
+    const byte = _SRC_BUF[i]
+    if (byte < 128 && _WS_TABLE[byte]) {
+      if (!prevSpace) { _DST_BUF[destIdx++] = 32; prevSpace = true }
     } else {
-      out += c
+      _DST_BUF[destIdx++] = byte
       prevSpace = false
     }
   }
-  return out
-}
-
-export function isBlockTag(tag: string): boolean {
-  return BLOCK_TAGS.has(tag)
-}
-
-export function isSkipTag(tag: string): boolean {
-  return SKIP_TAGS.has(tag)
-}
-
-export function isContainerTag(tag: string): boolean {
-  return CONTAINER_TAGS.has(tag)
+  return _DECODER.decode(_DST_BUF.subarray(0, destIdx))
 }
 
 export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {
@@ -95,16 +89,16 @@ export function admonitionType(cls: string): string | null {
 
 export function hasBlockChildren(elem: ElementLike): boolean {
   for (const child of elem.children) {
-    if (isBlockTag(child.localName)) return true
+    if (BLOCK_TAGS.has(child.localName)) return true
   }
   return false
 }
 
 export function getTextContent(node: NodeLike): string {
-  if (node.nodeType === TEXT_NODE) return (node as TextLike).textContent ?? ''
+  if (node.nodeType === TEXT_NODE) return node.textContent ?? ''
   let out = ''
-  for (const child of (node as ElementLike).childNodes) {
-    if (child.nodeType === TEXT_NODE) out += (child as TextLike).textContent ?? ''
+  for (const child of node.childNodes) {
+    if (child.nodeType === TEXT_NODE) out += child.textContent ?? ''
     else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (el.localName === 'br') out += '\n'

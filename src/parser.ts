@@ -1,27 +1,26 @@
-import type { Context, Block, Inline, ListItem, ElementLike, NodeLike, TextLike } from './options'
+import type { Block, Context, ElementLike, Inline, ListItem, NodeLike, TextLike } from './options'
 import {
-  ELEMENT_NODE,
-  TEXT_NODE,
-  SkipFlags,
   BLOCK_TAGS,
+  CONTAINER_TAGS,
+  ELEMENT_NODE,
+  SKIP_TAGS,
+  SkipFlags,
+  TEXT_NODE,
 } from './options'
 import {
-  escapeMarkdown,
-  collapseWhitespace,
-  isBlockTag,
-  isSkipTag,
-  isContainerTag,
-  matchesCodeBy,
   admonitionType,
-  hasBlockChildren,
-  getTextContent,
-  hasLinkChildren,
-  isInlineBlank,
-  inlinesBlank,
-  findChild,
-  getCodeText,
+  collapseWhitespace,
+  escapeMarkdown,
   extractLanguage,
+  findChild,
   flushPendingInline,
+  getCodeText,
+  getTextContent,
+  hasBlockChildren,
+  hasLinkChildren,
+  inlinesBlank,
+  isInlineBlank,
+  matchesCodeBy
 } from './utils'
 
 // ---- admonition detection ----
@@ -277,7 +276,7 @@ function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
 function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   const tag = elem.localName
 
-  if (isSkipTag(tag)) return
+  if (SKIP_TAGS.has(tag)) return
 
   if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return
 
@@ -374,7 +373,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   }
 
   // container elements (div, section, etc.)
-  if (isContainerTag(tag)) {
+  if (CONTAINER_TAGS.has(tag)) {
     if (hasBlockChildren(elem)) {
       convertChildren(elem, ctx, out)
     } else {
@@ -480,7 +479,7 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
       pending.push({ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) })
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
-      if (isBlockTag(el.localName) && el.localName !== 'li') {
+      if (BLOCK_TAGS.has(el.localName) && el.localName !== 'li') {
         flushPendingInline(blocks, pending)
         pending = null
         convertElement(el, ctx, blocks)
@@ -564,5 +563,5 @@ function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: 
   }
 }
 
-export { convertNode, convertChildren, convertElement, convertInline, collectInlines, convertTable }
-export { convertAdmonition, propagateLanguage, convertCodeByElement }
+export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable, propagateLanguage }
+
