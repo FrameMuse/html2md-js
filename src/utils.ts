@@ -87,6 +87,22 @@ export function escapeMarkdownGodMode(text: string): string {
   return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
 }
 
+const ESCAPE_TEST = /[\\*_`\[\]{}()#+\-\.!]/
+
+export function escapeMarkdownHybrid(text: string): string {
+  if (!ESCAPE_TEST.test(text)) return text
+  const { written: srcLen } = encoder.encodeInto(text, SRC_BUFFER)
+  let destIdx = 0
+  for (let i = 0; i < srcLen; i++) {
+    const byte = SRC_BUFFER[i]
+    if (byte < 128 && ESCAPE_TABLE[byte] === 1) {
+      DEST_BUFFER[destIdx++] = 92
+    }
+    DEST_BUFFER[destIdx++] = byte
+  }
+  return decoder.decode(DEST_BUFFER.subarray(0, destIdx))
+}
+
 new TextEncoder
 
 export function escapeMarkdownSuperFast(text: string): string {

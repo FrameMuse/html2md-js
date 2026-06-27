@@ -1,46 +1,49 @@
 $ bun benchmarks/conversion.ts && bun benchmarks/escape.ts && bun benchmarks/internal.ts
 Element input (pre-parsed DOM)
-  [020.329µs] [fastest]  page (0.6K)
-  [028.986µs] [+1.43x]   page +full opts
-  [147.060µs] [+7.23x]   prereqs (24.8K)
-  [126.150µs] [+6.21x]   prereqs +full opts
-  [001.531ms] [+75.31x]  figma (96.1K)
-  [003.072ms] [+151.10x] figma +full opts
+  [038.994µs] [+2.21x]  page (0.6K)
+  [017.654µs] [fastest] page +full opts
+  [138.753µs] [+7.86x]  prereqs (24.8K)
+  [139.655µs] [+7.91x]  prereqs +full opts
+  [001.276ms] [+72.28x] figma (96.1K)
+  [001.726ms] [+97.75x] figma +full opts
 Option breakdown (figma 96.1K)
-  [001.243ms] [+1.09x]  default
-  [001.275ms] [+1.12x]  codeBy only
-  [001.449ms] [+1.27x]  hoist only
-  [001.139ms] [fastest] skip only
+  [001.052ms] [fastest] default
+  [001.230ms] [+1.17x]  codeBy only
+  [001.119ms] [+1.06x]  hoist only
+  [001.072ms] [+1.02x]  skip only
 Synthetic: admonitions x50
-  [341.000ns] [fastest] element
+  [340.000ns] [fastest] element
 Synthetic: 10x10 table
-  [261.000ns] [fastest] element
+  [281.000ns] [fastest] element
 Synthetic: code-by x100
-  [371.000ns] [fastest] element
-escapeMarkdown: 7 variants  (0% special chars)
-  [081.996µs] [+174.09x] loop (Set.has)
-  [471.000ns] [fastest]  regex (.replace)
+  [391.000ns] [fastest] element
+escapeMarkdown: 8 variants  (0% special chars)
+  [081.635µs] [+173.32x] loop (Set.has)
+  [481.000ns] [+1.02x]   regex (.replace)
   [471.000ns] [fastest]  fastRegex (pre-compiled)
-  [001.002µs] [+2.13x]   matchAll (for..of)
+  [001.022µs] [+2.17x]   matchAll (for..of)
   [481.000ns] [+1.02x]   exec (while loop)
-  [011.762µs] [+24.97x]  superFast (Uint8Array+slice)
-  [014.828µs] [+31.48x]  godMode (TextEncoder+buffer)
-escapeMarkdown: 7 variants  (5% special chars)
-  [028.785µs] [+5.08x]  loop (Set.has)
-  [048.347µs] [+8.54x]  regex (.replace)
-  [049.063µs] [+8.67x]  fastRegex (pre-compiled)
-  [042.190µs] [+7.45x]  matchAll (for..of)
-  [034.526µs] [+6.10x]  exec (while loop)
-  [012.614µs] [+2.23x]  superFast (Uint8Array+slice)
-  [005.661µs] [fastest] godMode (TextEncoder+buffer)
-escapeMarkdown: 7 variants  (50% special chars)
-  [041.689µs] [+4.90x]  loop (Set.has)
-  [343.333µs] [+40.32x] regex (.replace)
-  [344.691µs] [+40.48x] fastRegex (pre-compiled)
-  [252.641µs] [+29.67x] matchAll (for..of)
-  [236.310µs] [+27.75x] exec (while loop)
-  [016.502µs] [+1.94x]  superFast (Uint8Array+slice)
-  [008.516µs] [fastest] godMode (TextEncoder+buffer)
+  [011.862µs] [+25.18x]  superFast (Uint8Array+slice)
+  [014.928µs] [+31.69x]  godMode (TextEncoder+buffer)
+  [471.000ns] [fastest]  hybrid (fast-path+encoder)
+escapeMarkdown: 8 variants  (5% special chars)
+  [028.604µs] [+7.23x]  loop (Set.has)
+  [047.721µs] [+12.06x] regex (.replace)
+  [047.460µs] [+11.99x] fastRegex (pre-compiled)
+  [041.840µs] [+10.57x] matchAll (for..of)
+  [033.579µs] [+8.48x]  exec (while loop)
+  [012.304µs] [+3.11x]  superFast (Uint8Array+slice)
+  [003.958µs] [fastest] godMode (TextEncoder+buffer)
+  [005.570µs] [+1.41x]  hybrid (fast-path+encoder)
+escapeMarkdown: 8 variants  (50% special chars)
+  [040.332µs] [+7.62x]  loop (Set.has)
+  [340.947µs] [+64.45x] regex (.replace)
+  [331.839µs] [+62.73x] fastRegex (pre-compiled)
+  [269.496µs] [+50.94x] matchAll (for..of)
+  [229.785µs] [+43.44x] exec (while loop)
+  [016.762µs] [+3.17x]  superFast (Uint8Array+slice)
+  [008.206µs] [+1.55x]  godMode (TextEncoder+buffer)
+  [005.290µs] [fastest] hybrid (fast-path+encoder)
 collapseWhitespace / collapseTrim
-  [081.615µs] [fastest] collapseWhitespace
-  [167.700µs] [+2.05x]  collapseTrim
+  [082.206µs] [fastest] collapseWhitespace
+  [180.833µs] [+2.20x]  collapseTrim
