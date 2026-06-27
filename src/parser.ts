@@ -8,8 +8,6 @@ import {
   SkipFlags,
   TEXT_NODE,
 } from './options'
-import { RE_SPLIT_WS } from './regexps'
-
 import {
   admonitionType,
   collapseWhitespace,
@@ -46,21 +44,7 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
   out.push({ type: 'blockquote', children: blocks })
 }
 
-// ---- language propagation ----
 
-function propagateLanguage(pre: ElementLike): void {
-  const preClass = pre.getAttribute?.('class') ?? ''
-  const lang = preClass.split(RE_SPLIT_WS).find(s => s.startsWith('language-'))
-  if (!lang) return
-  for (const child of pre.children) {
-    if (child.localName === 'code') {
-      const existing = child.getAttribute?.('class') ?? ''
-      if (!existing.split(RE_SPLIT_WS).includes(lang)) {
-        child.setAttribute?.('class', existing ? `${existing} ${lang}` : lang)
-      }
-    }
-  }
-}
 
 // ---- inline conversion ----
 // All inline functions return true when any content was pushed to `out`.
@@ -343,15 +327,14 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
     }
 
     case 'pre': {
-      propagateLanguage(elem)
       const codeEl = findChild(elem, 'code')
       if (codeEl) {
         const codeText = getCodeText(codeEl)
-        const lang = extractLanguage(codeEl)
+        const lang = extractLanguage(elem) || extractLanguage(codeEl)
         out.push({ type: 'codeblock', language: lang, code: codeText, fenced: true })
       } else {
         const text = getCodeText(elem)
-        out.push({ type: 'codeblock', language: undefined, code: text, fenced: false })
+        out.push({ type: 'codeblock', language: extractLanguage(elem), code: text, fenced: false })
       }
       return
     }
@@ -559,5 +542,5 @@ function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: 
   }
 }
 
-export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable, propagateLanguage }
+export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable }
 
