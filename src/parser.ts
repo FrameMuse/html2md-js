@@ -3,6 +3,7 @@ import {
   BLOCK_TAGS,
   CONTAINER_TAGS,
   ELEMENT_NODE,
+  SKIP_TAG_FLAGS,
   SKIP_TAGS,
   SkipFlags,
   TEXT_NODE,
@@ -280,15 +281,8 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
 
   if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return
 
-  const SKIP_TAG_FLAGS: Record<string, number> = {
-    header: SkipFlags.HEADER,
-    footer: SkipFlags.FOOTER,
-    aside: SkipFlags.ASIDE,
-    nav: SkipFlags.NAV,
-    menu: SkipFlags.MENU,
-  }
   const tagFlag = SKIP_TAG_FLAGS[tag]
-  if (tagFlag !== undefined && (ctx.options.skip & tagFlag)) return
+  if (tagFlag != null && (ctx.options.skip & tagFlag)) return
 
   // code-by matched element
   if (matchesCodeBy(elem, ctx.options.codeBy)) {

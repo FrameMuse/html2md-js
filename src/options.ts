@@ -11,6 +11,14 @@ export const SkipFlags = {
   MENU: 1 << 5,
 } as const
 
+export const SKIP_TAG_FLAGS: Record<string, number> = {
+  header: SkipFlags.HEADER,
+  footer: SkipFlags.FOOTER,
+  aside: SkipFlags.ASIDE,
+  nav: SkipFlags.NAV,
+  menu: SkipFlags.MENU,
+}
+
 export interface HtmlToMdOptions {
   headingStyle?: 'atx' | 'setext'
   codeBlockStyle?: 'fenced' | 'indented'
