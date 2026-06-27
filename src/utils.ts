@@ -28,6 +28,21 @@ export function escapeMarkdownWithReplace(text: string): string {
   return text.replace(/([\\*_`\[\]{}()#+\-\.!])/g, '\\$1')
 }
 
+const ESCAPE_RE = /[\\*_`\[\]{}()#+\-\.!]/g
+
+export function escapeMarkdownWithMatchAll(text: string): string {
+  let out = ''
+  let last = 0
+  for (const match of text.matchAll(ESCAPE_RE)) {
+    out += text.slice(last, match.index)
+    out += '\\'
+    out += match[0]
+    last = match.index + 1
+  }
+  out += text.slice(last)
+  return out
+}
+
 export function collapseWhitespace(s: string): string {
   let out = ''
   let prevSpace = false
