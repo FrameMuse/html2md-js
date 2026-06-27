@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test"
+    "test": "bun test",
+    "bench": "bun benchmarks/conversion.ts && bun benchmarks/escape.ts && bun benchmarks/internal.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
