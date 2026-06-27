@@ -349,6 +349,8 @@ function collectInlinesWithCodeSplit(node: Node, ctx: Context): InlineResult {
 function convertInline(elem: Element, ctx: Context): InlineResult | null {
   const tag = elem.localName
 
+  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute('aria-hidden') === 'true') return null
+
   if (tag === 'strong' || tag === 'b') {
     const inner = collectInlines(elem, ctx)
     if (inner.every(i => isInlineBlank(i))) return null
