@@ -1,11 +1,7 @@
 import { bench } from "benchik"
 import { readFileSync } from "fs"
 import { HtmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
-import type { HtmlToMdOptions } from "../src/index.ts"
-import type { ElementLike } from "../src/options.ts"
 import { DOMParser } from "linkedom"
-
-const convert = (el: ElementLike, opts?: HtmlToMdOptions) => new HtmlToMd(opts).convert(el)
 
 const parser = new DOMParser()
 const FIXTURES = "tests/fixtures"
@@ -26,53 +22,49 @@ const SIZE_LABEL: Record<string, string> = {
   figma: `${(figmaHtml.length / 1024).toFixed(1)}K`,
 }
 
-const fullOpts: HtmlToMdOptions = {
+const dflt = new HtmlToMd()
+const full = new HtmlToMd({
   codeBy: ["h3.property", ".sig"],
   flags: HOIST_IMAGES | HOIST_LINKS,
   skip: SkipFlags.ARIA_HIDDEN,
+})
+const codeBy = new HtmlToMd({ codeBy: ["h3.property", ".sig"] })
+const hoist = new HtmlToMd({ flags: HOIST_IMAGES | HOIST_LINKS })
+const skipOnly = new HtmlToMd({ skip: SkipFlags.ARIA_HIDDEN })
+const codeByProp = new HtmlToMd({ codeBy: ["h3.property"] })
+
+using g1 = bench.group("Element input (pre-parsed DOM)")
+
+for (const name of ["page", "prereqs", "figma"] as const) {
+  const el = { page: pageEl, prereqs: prereqsEl, figma: figmaEl }[name]
+  bench(`${name} (${SIZE_LABEL[name]})`, () => dflt.convert(el))
+  bench(`${name} +full opts`, () => full.convert(el))
 }
 
-await bench.untilCompiled()
+using g2 = bench.group("Option breakdown (figma 96.1K)")
 
-{
-  using g1 = bench.group("Element input (pre-parsed DOM)")
+bench("default", () => dflt.convert(figmaEl))
+bench("codeBy only", () => codeBy.convert(figmaEl))
+bench("hoist only", () => hoist.convert(figmaEl))
+bench("skip only", () => skipOnly.convert(figmaEl))
 
-  for (const name of ["page", "prereqs", "figma"] as const) {
-    const el = { page: pageEl, prereqs: prereqsEl, figma: figmaEl }[name]
-    bench(`${name} (${SIZE_LABEL[name]})`, () => convert(el))
-    bench(`${name} +full opts`, () => convert(el, fullOpts))
-  }
-}
+using g3 = bench.group("Synthetic: admonitions x50")
 
-{
-  using g2 = bench.group("Option breakdown (figma 96.1K)")
+const admonHtml = `<div class="theme-admonition-note"><div class="admonitionContent"><p>Lorem ipsum dolor sit amet.</p></div></div>`.repeat(50)
+const admonEl = parser.parseFromString(admonHtml, "text/html").body
 
-  bench("default", () => convert(figmaEl))
-  bench("codeBy only", () => convert(figmaEl, { codeBy: ["h3.property", ".sig"] }))
-  bench("hoist only", () => convert(figmaEl, { flags: HOIST_IMAGES | HOIST_LINKS }))
-  bench("skip only", () => convert(figmaEl, { skip: SkipFlags.ARIA_HIDDEN }))
-}
-{
-  using g3 = bench.group("Synthetic: admonitions x50")
+bench("element", () => dflt.convert(admonEl))
 
-  const admonHtml = `<div class="theme-admonition-note"><div class="admonitionContent"><p>Lorem ipsum dolor sit amet.</p></div></div>`.repeat(50)
-  const admonEl = parser.parseFromString(admonHtml, "text/html").body
+using g4 = bench.group("Synthetic: 10x10 table")
 
-  bench("element", () => convert(admonEl))
-}
-{
-  using g4 = bench.group("Synthetic: 10x10 table")
+const tableHtml = `<table><thead><tr>${"<th>H</th>".repeat(10)}</tr></thead><tbody>${"<tr>" + "<td>cell</td>".repeat(10) + "</tr>".repeat(10)}</tbody></table>`
+const tableEl = parser.parseFromString(tableHtml, "text/html").body
 
-  const tableHtml = `<table><thead><tr>${"<th>H</th>".repeat(10)}</tr></thead><tbody>${"<tr>" + "<td>cell</td>".repeat(10) + "</tr>".repeat(10)}</tbody></table>`
-  const tableEl = parser.parseFromString(tableHtml, "text/html").body
+bench("element", () => dflt.convert(tableEl))
 
-  bench("element", () => convert(tableEl))
-}
-{
-  using g5 = bench.group("Synthetic: code-by x100")
+using g5 = bench.group("Synthetic: code-by x100")
 
-  const codeByHtml = "<h3 class=\"property\">annotations: ReadonlyArray&lt;<a href=\"/docs/Annotation/\">Annotation</a>&gt;</h3>".repeat(100)
-  const codeByEl = parser.parseFromString(codeByHtml, "text/html").body
+const codeByHtml = "<h3 class=\"property\">annotations: ReadonlyArray&lt;<a href=\"/docs/Annotation/\">Annotation</a>&gt;</h3>".repeat(100)
+const codeByEl = parser.parseFromString(codeByHtml, "text/html").body
 
-  bench("element", () => convert(codeByEl, { codeBy: ["h3.property"] }))
-}
+bench("element", () => codeByProp.convert(codeByEl))
