@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll } from "bun:test";
 import { readFileSync } from "fs";
-import { htmlToMd } from "../src/index.ts";
+import { htmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts";
 
 const FIXTURES = "tests/fixtures";
 
@@ -32,6 +32,20 @@ describe("full page snapshots", () => {
       doc.querySelector("div#__blog-post-container.markdown");
     if (!el) throw new Error("selector not found");
     const result = htmlToMd(el);
+    expect(result).toMatchSnapshot();
+  });
+
+  test("figma manifest page", () => {
+    const html = readFileSync(`${FIXTURES}/figma-manifest.html`, "utf-8");
+    const { DOMParser } = require("linkedom");
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const el = doc.querySelector("div.theme-doc-markdown.markdown");
+    if (!el) throw new Error("selector not found");
+    const result = htmlToMd(el, {
+      flags: HOIST_IMAGES | HOIST_LINKS,
+      skip: SkipFlags.ARIA_HIDDEN,
+      codeBy: ["h3.property", ".sig"],
+    });
     expect(result).toMatchSnapshot();
   });
 

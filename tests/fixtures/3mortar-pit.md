@@ -40,23 +40,20 @@ The **3" Mortar Emplacement**, or simply the **Mortar Pit**, is a [British][ref3
 
 - [1 Overview][ref21]
 - [2 Weapons][ref22]
-    - [2.1 OML 3" Mortar][ref23]
-  
-  
+  - [2.1 OML 3" Mortar][ref23]
+
 - [3 Abilities][ref24]
-    - [3.1 3" Mortar Bombardment][ref25]
-    - [3.2 3" Supercharge Barrage][ref26]
-    - [3.3 Overwatch Barrage][ref27]
-    - [3.4 Counter Battery][ref28]
-  
-  
+  - [3.1 3" Mortar Bombardment][ref25]
+  - [3.2 3" Supercharge Barrage][ref26]
+  - [3.3 Overwatch Barrage][ref27]
+  - [3.4 Counter Battery][ref28]
+
 - [4 Tactics][ref29]
-    - [4.1 Placement][ref30]
-    - [4.2 Royal Artillery Support][ref31]
-    - [4.3 Victor Target][ref32]
-    - [4.4 Weaknesses][ref33]
-  
-  
+  - [4.1 Placement][ref30]
+  - [4.2 Royal Artillery Support][ref31]
+  - [4.3 Victor Target][ref32]
+  - [4.4 Weaknesses][ref33]
+
 - [5 Historical Data][ref34]
 - [6 Gallery][ref35]
 

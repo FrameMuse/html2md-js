@@ -671,7 +671,7 @@ function collectListItems(elem: Element, ctx: Context): ListItem[] {
       const hasBlocks = hasBlockChildrenExceptLi(child)
       let blocks: Block[]
       if (hasBlocks) {
-        blocks = convertChildren(child, ctx)
+        blocks = collectContentWithInlineMerge(child, ctx)
       } else {
         const inlines = collectInlines(child, ctx)
         blocks = inlinesBlank(inlines) ? [] : [blockParagraph(inlines)]
@@ -680,6 +680,43 @@ function collectListItems(elem: Element, ctx: Context): ListItem[] {
     }
   }
   return items
+}
+
+function collectContentWithInlineMerge(elem: Element, ctx: Context): Block[] {
+  const blocks: Block[] = []
+  let pending: Inline[] | null = null
+  for (const child of elem.childNodes) {
+    if (child.nodeType === TEXT_NODE) {
+      const text = (child as Text).textContent ?? ''
+      if (!text.trim()) { flushPendingInline(blocks, pending); pending = null; continue }
+      if (!pending) pending = []
+      pending.push({ type: 'text', text: escapeMarkdown(collapseWhitespace(text)) })
+    } else if (child.nodeType === ELEMENT_NODE) {
+      const el = child as Element
+      if (isBlockTag(el.localName) && el.localName !== 'li') {
+        flushPendingInline(blocks, pending)
+        pending = null
+        blocks.push(...convertElement(el, ctx))
+      } else {
+        const result = convertInline(el, ctx)
+        if (result && result.length > 0) {
+          if (!pending) pending = []
+          pending.push(...result)
+        }
+      }
+    } else {
+      flushPendingInline(blocks, pending)
+      pending = null
+    }
+  }
+  flushPendingInline(blocks, pending)
+  return blocks
+}
+
+function flushPendingInline(blocks: Block[], pending: Inline[] | null) {
+  if (pending && pending.length > 0) {
+    blocks.push(blockParagraph(pending))
+  }
 }
 
 function hasBlockChildrenExceptLi(elem: Element): boolean {
