@@ -1,4 +1,4 @@
-import type { Block, ElementLike, HtmlToMdOptions, CodeByRule } from './options'
+import type { Block, ElementLike, HtmlToMdOptions, ResolvedOptions, Context } from './options'
 import {
   HoistedMap,
   parseCodeByRule,
@@ -18,52 +18,35 @@ export { HOIST_IMAGES, HOIST_LINKS, SkipFlags } from './options'
 export type { HtmlToMdOptions }
 
 export class HtmlToMd {
-  private headingStyle: 'atx' | 'setext'
-  private codeBlockStyle: 'fenced' | 'indented'
-  private bulletListMarker: string
-  private hr: string
-  private emDelimiter: string
-  private strongDelimiter: string
-  private fence: string
-  private codeBy: CodeByRule[]
-  private flags: number
-  private skip: number
+  private opts: ResolvedOptions
+  private ctx: Context
 
   constructor(options?: HtmlToMdOptions) {
-    this.headingStyle = options?.headingStyle ?? 'atx'
-    this.codeBlockStyle = options?.codeBlockStyle ?? 'fenced'
-    this.bulletListMarker = options?.bulletListMarker ?? '-'
-    this.hr = options?.hr ?? '---'
-    this.emDelimiter = options?.emDelimiter ?? '_'
-    this.strongDelimiter = options?.strongDelimiter ?? '**'
-    this.fence = options?.fence ?? '```'
-    this.codeBy = (options?.codeBy ?? []).map(parseCodeByRule)
-    this.flags = options?.flags ?? 0
-    this.skip = options?.skip ?? 0
+    this.opts = {
+      headingStyle: options?.headingStyle ?? 'atx',
+      codeBlockStyle: options?.codeBlockStyle ?? 'fenced',
+      bulletListMarker: options?.bulletListMarker ?? '-',
+      hr: options?.hr ?? '---',
+      emDelimiter: options?.emDelimiter ?? '_',
+      strongDelimiter: options?.strongDelimiter ?? '**',
+      fence: options?.fence ?? '```',
+      codeBy: (options?.codeBy ?? []).map(parseCodeByRule),
+      flags: options?.flags ?? 0,
+      skip: options?.skip ?? 0,
+      hoisted: new HoistedMap(),
+    }
+    this.ctx = { options: this.opts, inList: false }
   }
 
   convert(input: ElementLike): string {
-    const hoisted = new HoistedMap()
-    const opts = {
-      headingStyle: this.headingStyle,
-      codeBlockStyle: this.codeBlockStyle,
-      bulletListMarker: this.bulletListMarker,
-      hr: this.hr,
-      emDelimiter: this.emDelimiter,
-      strongDelimiter: this.strongDelimiter,
-      fence: this.fence,
-      codeBy: this.codeBy,
-      flags: this.flags,
-      skip: this.skip,
-      hoisted,
-    }
-    const ctx = { options: opts, inList: false }
+    this.opts.hoisted = new HoistedMap()
+    this.ctx.inList = false
     const blocks: Block[] = []
-    convertChildren(input, ctx, blocks)
-    let result = serializeBlocks(blocks, opts, 0)
+    convertChildren(input, this.ctx, blocks)
+    let result = serializeBlocks(blocks, this.opts, 0)
     result = collapseTrim(result)
     result = postProcess(result)
-    if (hoisted.size) result += '\n\n' + hoisted.footer
+    if (this.opts.hoisted.size) result += '\n\n' + this.opts.hoisted.footer
     return result
   }
 }
