@@ -293,8 +293,8 @@ export function getCodeText(elem: ElementLike): string {
   const cn = elem.childNodes
   for (let i = 0; i < cn.length; i++) {
     const child = cn[i]
-    if (child.nodeType === TEXT_NODE) {
-      out += (child as TextLike).textContent ?? ''
+    if (child.nodeType === TEXT_NODE && child.textContent) {
+      out += child.textContent
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (el.localName === 'br') out += '\n'
@@ -305,9 +305,9 @@ export function getCodeText(elem: ElementLike): string {
 }
 
 export function extractLanguage(elem: ElementLike): string | undefined {
-  const cls = elem.getAttribute?.('class') ?? ''
-  const lang = cls.split(RE_SPLIT_WS).find(s => s.startsWith('language-'))
-  return lang ? lang.slice(9) : undefined
+  const cls = elem.getAttribute?.('class')
+  const lang = cls?.split(RE_SPLIT_WS).find(s => s.startsWith('language-'))
+  return lang?.slice(9)
 }
 
 export function flushPendingInline(blocks: Block[], pending: Inline[] | null) {
@@ -317,13 +317,15 @@ export function flushPendingInline(blocks: Block[], pending: Inline[] | null) {
 }
 
 export function collapseTrim(s: string): string {
-  return s.replace(RE_TRIM_NEWLINES, '').replace(RE_COLLAPSE_NEWLINES, '\n\n')
+  return s
+    .replace(RE_TRIM_NEWLINES, '')
+    .replace(RE_COLLAPSE_NEWLINES, '\n\n')
 }
 
 export function postProcess(md: string): string {
-  md = md.replace(RE_EMPTY_ANCHOR, '')
-  md = md.replace(RE_UNESCAPE_HYPHEN, '-')
   return md
+    .replace(RE_EMPTY_ANCHOR, '')
+    .replace(RE_UNESCAPE_HYPHEN, '-')
 }
 
 export function blockParagraph(content: Inline[]): Block {

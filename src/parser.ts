@@ -79,7 +79,7 @@ function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
   for (let i = 0; i < cn.length; i++) {
     const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
-      const text = (child as TextLike).textContent ?? ''
+      const text = child.textContent ?? ''
       if (text) {
         ctx.textSlots.push({ out, idx: out.length, raw: text })
         out.push(null as any)
@@ -103,7 +103,7 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]
   for (let i = 0; i < cn.length; i++) {
     const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
-      buf += (child as TextLike).textContent ?? ''
+      buf += child.textContent ?? ''
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (el.localName === 'a') {
@@ -439,25 +439,18 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
 
 function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   const tag = elem.localName
-
-  if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
-    const level = parseInt(tag[1], 10)
-    const inlines: Inline[] = []
-    collectInlinesWithCodeSplit(elem, ctx, inlines)
-    if (inlines.length) out.push({ type: BlockType.heading, level, content: inlines })
-    return
-  }
-
-  if (tag === 'p' || tag === 'div' || tag === 'span') {
-    const inlines: Inline[] = []
-    collectInlinesWithCodeSplit(elem, ctx, inlines)
-    if (inlines.length) out.push({ type: BlockType.paragraph, content: inlines })
-    return
-  }
-
   const inlines: Inline[] = []
   collectInlinesWithCodeSplit(elem, ctx, inlines)
-  if (inlines.length) out.push({ type: BlockType.paragraph, content: inlines })
+  if (!inlines.length) return
+
+  switch (tag) {
+    case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+      out.push({ type: BlockType.heading, level: parseInt(tag[1], 10), content: inlines })
+      break
+    default:
+      out.push({ type: BlockType.paragraph, content: inlines })
+      break
+  }
 }
 
 function convertChildren(elem: ElementLike, ctx: Context, out: Block[]): void {
@@ -497,15 +490,18 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
   for (let i = 0; i < cn.length; i++) {
     const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
-      const text = (child as TextLike).textContent ?? ''
-      if (!text.trim()) { flushTextSlots(ctx); flushPendingInline(blocks, pending); pending = null; continue }
+      const text = child.textContent ?? ''
+      if (!text.trim()) {
+        flushPendingInline(blocks, pending);
+        pending = null;
+        continue
+      }
       if (!pending) pending = []
       ctx.textSlots.push({ out: pending, idx: pending.length, raw: text })
       pending.push(null as any)
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (BLOCK_TAGS.has(el.localName) && el.localName !== 'li') {
-        flushTextSlots(ctx)
         flushPendingInline(blocks, pending)
         pending = null
         convertElement(el, ctx, blocks)
@@ -517,12 +513,10 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
         }
       }
     } else {
-      flushTextSlots(ctx)
       flushPendingInline(blocks, pending)
       pending = null
     }
   }
-  flushTextSlots(ctx)
   flushPendingInline(blocks, pending)
   return blocks
 }
