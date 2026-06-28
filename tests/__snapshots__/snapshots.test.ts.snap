@@ -507,8 +507,8 @@ def hello():
 - Unordered item 2 
   - Nested item
 
-1.  Ordered item 5
-2.  Ordered item 6
+5.  Ordered item 5
+6.  Ordered item 6
 
 | Name | Value |
 | --- | --- |

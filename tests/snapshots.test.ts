@@ -3,10 +3,7 @@ import { readFileSync } from "fs"
 import { HtmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
 import type { HtmlToMdOptions } from "../src/index.ts"
 import type { ElementLike } from "../src/options.ts"
-
-const convert = (el: ElementLike, opts?: HtmlToMdOptions) => new HtmlToMd(opts).convert(el)
 import { DOMParser } from "linkedom"
-
 const parser = new DOMParser()
 const FIXTURES = "tests/fixtures"
 
@@ -16,6 +13,8 @@ let updateHtml: string
 function parse(html: string): Document {
   return parser.parseFromString(html, "text/html")
 }
+
+const convert = (el: ElementLike, opts?: HtmlToMdOptions) => new HtmlToMd(opts).convert(el)
 
 beforeAll(() => {
   docHtml = readFileSync(`${FIXTURES}/prerequisites.html`, "utf-8")

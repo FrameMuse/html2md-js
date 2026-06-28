@@ -37,7 +37,7 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
   for (let i = 0; i < ch.length; i++) {
     const child = ch[i]
     if (child.localName === 'div') {
-      const c = child.className ?? ''
+      const c = child.getAttribute?.('class') ?? ''
       if (c.includes('admonitionContent')) {
         const gcNodes = child.childNodes
         for (let j = 0; j < gcNodes.length; j++) {
@@ -89,8 +89,8 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]
       const el = child as ElementLike
       if (el.localName === 'a') {
         flush()
-        const href = el.href ?? ''
-        const title = el.title
+        const href = el.getAttribute?.('href') ?? ''
+        const title = el.getAttribute?.('title')
         const content: Inline[] = []
         collectInlines(el, ctx, content)
         out.push({ type: InlineType.link, children: content, url: href, title })
@@ -109,7 +109,7 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]
 function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean {
   const tag = elem.localName
 
-  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && (elem.ariaHidden ?? elem.getAttribute?.('aria-hidden')) === 'true') return false
+  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return false
 
   if (tag === 'strong' || tag === 'b') {
     const inner: Inline[] = []
@@ -160,8 +160,8 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
   }
 
   if (tag === 'a') {
-    const href = elem.href ?? ''
-    const title = elem.title
+    const href = elem.getAttribute?.('href') ?? ''
+    const title = elem.getAttribute?.('title')
     const content: Inline[] = []
     collectInlines(elem, ctx, content)
     let nonBlank = false
@@ -178,10 +178,10 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
   }
 
   if (tag === 'img') {
-    const src = elem.src ?? ''
+    const src = elem.getAttribute?.('src') ?? ''
     if (!src) return false
-    const alt = elem.alt ?? ''
-    const title = elem.title
+    const alt = elem.getAttribute?.('alt') ?? ''
+    const title = elem.getAttribute?.('title')
     out.push({ type: InlineType.image, alt, url: src, title })
     return true
   }
@@ -221,7 +221,7 @@ function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean 
   }
 
   if (tag === 'ol') {
-    const start = parseInt(elem.start ?? '1', 10)
+    const start = parseInt(elem.getAttribute?.('start') ?? '1', 10)
     collectOrderedListInlines(elem, start, ctx, out)
     return true
   }
@@ -279,7 +279,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
 
   if (SKIP_TAGS.has(tag)) return
 
-  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && (elem.ariaHidden ?? elem.getAttribute?.('aria-hidden')) === 'true') return
+  if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return
 
   const tagFlag = SKIP_TAG_FLAGS[tag]
   if (tagFlag != null && (ctx.options.skip & tagFlag)) return
@@ -292,7 +292,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
 
   // admonition
   if (tag === 'div') {
-    const cls = elem.className ?? ''
+    const cls = elem.getAttribute?.('class') ?? ''
     const atype = admonitionType(cls)
     if (atype) { convertAdmonition(elem, atype, ctx, out); return }
   }
@@ -338,7 +338,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
     }
 
     case 'ol': {
-      const startStr = elem.start
+      const startStr = elem.getAttribute?.('start')
       const start = startStr ? parseInt(startStr, 10) : 1
       const items = collectListItems(elem, ctx)
       if (items.length) out.push({ type: BlockType.list, ordered: true, items, start })

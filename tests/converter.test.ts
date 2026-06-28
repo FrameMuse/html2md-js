@@ -2,16 +2,16 @@ import { describe, test, expect } from "bun:test"
 import { HtmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
 import type { HtmlToMdOptions } from "../src/index.ts"
 import type { ElementLike } from "../src/options.ts"
-
-const convert = (el: ElementLike, opts?: HtmlToMdOptions) => new HtmlToMd(opts).convert(el)
 import { DOMParser } from "linkedom"
 
 const parser = new DOMParser()
 
-function el(html: string): Element {
+function el(html: string): ElementLike {
   const doc = parser.parseFromString(`<html><body>${html}</body></html>`, "text/html")
   return doc.body
 }
+
+const convert = (el: ElementLike, opts?: HtmlToMdOptions) => new HtmlToMd(opts).convert(el)
 
 describe("paragraphs", () => {
   test("simple paragraph", () => {

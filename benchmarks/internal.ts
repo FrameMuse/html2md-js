@@ -1,9 +1,6 @@
 import { bench } from "benchik"
-import { DOMParser } from "linkedom"
 import { readFileSync } from "fs"
 import { collapseWhitespace, collapseTrim, postProcess, extractLanguage, getTextContent, getCodeText } from "../src/utils.ts"
-
-// ---- collapseWhitespace ----
 
 function collapseLoop(text: string): string {
   let out = ''
@@ -25,21 +22,17 @@ const wsText = "  hello   world\n\n\nfoo   bar  ".repeat(500)
 bench("production (buffer+encode)", () => { collapseWhitespace(wsText) })
 bench("loop (for..of+ +=)", () => { collapseLoop(wsText) })
 
-// ---- collapseTrim ----
-
 using g2 = bench.group("collapseTrim")
 
 const bigText = "  hello   world\n\n\nfoo   bar  ".repeat(500)
 bench("production (regex)", () => { collapseTrim(bigText) })
-
-// ---- postProcess ----
 
 using g3 = bench.group("postProcess")
 
 const mdText = readFileSync("tests/fixtures/figma-manifest.md", "utf-8")
 bench("production (two replace)", () => { postProcess(mdText) })
 
-// ---- extractLanguage ----
+import { DOMParser } from "linkedom"
 
 using g4 = bench.group("extractLanguage")
 
@@ -48,8 +41,6 @@ const langDoc = parser.parseFromString('<pre class="language-typescript"><code><
 const langEl = langDoc.documentElement
 
 bench("split+find+slice", () => { extractLanguage(langEl) })
-
-// ---- getTextContent / getCodeText ----
 
 using g5 = bench.group("getTextContent / getCodeText")
 
