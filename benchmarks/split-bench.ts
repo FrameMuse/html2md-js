@@ -33,6 +33,20 @@ function splitForLoop(s: string): string[] {
   return result
 }
 
+function splitBuffer(s: string): string[] {
+  const result: string[] = []
+  let buf = ''
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === SEP) {
+      if (buf) { result.push(buf); buf = '' }
+    } else {
+      buf += s[i]
+    }
+  }
+  if (buf) result.push(buf)
+  return result
+}
+
 // ---- test data ----
 
 const texts: string[] = []
@@ -48,3 +62,4 @@ using g1 = bench.group("split(SEP) — 300 segments")
 bench("split + filter", () => splitFilter(joined))
 bench("indexOf + slice", () => splitManual(joined))
 bench("for loop + charAt", () => splitForLoop(joined))
+bench("buffer (+=)", () => splitBuffer(joined))
