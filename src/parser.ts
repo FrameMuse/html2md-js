@@ -263,11 +263,13 @@ function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Contex
 
 function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
   if (node.nodeType === TEXT_NODE) {
-    const text = (node as TextLike).textContent ?? ''
+    const text = node .textContent
+    if (!text) return
+
     const trimmed = text.trim()
     if (!trimmed) return
-    out.push({ type: BlockType.paragraph, content: [{ type: InlineType.text, text: escapeMarkdown(collapseWhitespace(text)) }] })
-    return
+
+    out.push({ type: BlockType.paragraph, text: escapeMarkdown(collapseWhitespace(text)) })
   }
   if (node.nodeType === ELEMENT_NODE) {
     convertElement(node as ElementLike, ctx, out)

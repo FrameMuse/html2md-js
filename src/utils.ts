@@ -170,6 +170,7 @@ export function isBlockBlank(block: Block): boolean {
       return true
     }
     case BlockType.paragraph: {
+      if (block.text !== undefined) return !block.text.trim()
       if (!block.content) return true
       return inlinesBlank(block.content)
     }

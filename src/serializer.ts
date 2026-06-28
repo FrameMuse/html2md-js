@@ -18,7 +18,7 @@ function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): str
       return serializeHeading(block.level!, block.content!, opts)
 
     case BlockType.paragraph:
-      return serializeParagraph(block.content ?? [], opts)
+      return serializeParagraph(block.content, block.text, opts)
 
     case BlockType.blockquote:
       return serializeBlockQuote(block.children ?? [], opts, depth)
@@ -60,10 +60,10 @@ function serializeHeading(level: number, content: Inline[], opts: ResolvedOption
   return '#'.repeat(level) + ' ' + text + '\n\n'
 }
 
-function serializeParagraph(content: Inline[], opts: ResolvedOptions): string {
-  let text = serializeInlines(content, opts)
-  if (!text.trim()) return ''
-  return text + '\n\n'
+function serializeParagraph(content: Inline[] | undefined, text: string | undefined, opts: ResolvedOptions): string {
+  const s = text ?? serializeInlines(content ?? [], opts)
+  if (!s.trim()) return ''
+  return s + '\n\n'
 }
 
 function serializeBlockQuote(blocks: Block[], opts: ResolvedOptions, depth: number): string {
@@ -102,7 +102,7 @@ function serializeListItem(item: ListItem, opts: ResolvedOptions, _depth: number
     const b = item.blocks[i]
     const next = i < item.blocks.length - 1 ? item.blocks[i + 1] : null
     if (b.type === BlockType.paragraph) {
-      content += serializeInlines(b.content ?? [], opts)
+      content += b.text ?? serializeInlines(b.content ?? [], opts)
       if (next && next.type === BlockType.list) content += '\n'
       else if (next) content += '\n\n'
     } else if (b.type === BlockType.list) {

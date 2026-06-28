@@ -115,6 +115,7 @@ export interface Block {
   type: BlockType
   level?: number
   content?: Inline[]
+  text?: string
   children?: Block[]
   ordered?: boolean
   start?: number
@@ -159,10 +160,6 @@ export interface ElementLike {
   readonly childNodes: readonly NodeLike[]
   readonly localName: string
   readonly children: readonly ElementLike[]
-  className?: string
-  title?: string
-  alt?: string
-  ariaHidden?: string
   getAttribute?(name: string): string | null
 }
 
