@@ -159,8 +159,14 @@ export interface ElementLike {
   readonly childNodes: readonly NodeLike[]
   readonly localName: string
   readonly children: readonly ElementLike[]
+  className?: string
+  href?: string
+  title?: string
+  src?: string
+  alt?: string
+  start?: string
+  ariaHidden?: string
   getAttribute?(name: string): string | null
-  setAttribute?(name: string, value: string): void
 }
 
 export type NodeLike = TextLike | ElementLike

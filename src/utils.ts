@@ -69,7 +69,7 @@ export function collapseWhitespace(s: string): string {
 
 export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {
   const tag = elem.localName
-  const rawCls = elem.getAttribute?.('class')
+  const rawCls = elem.className
   const classes = rawCls ? rawCls.split(RE_SPLIT_WS) : null
   return rules.some(r => {
     if (r.tag && tag !== r.tag) return false
@@ -240,7 +240,7 @@ export function getCodeText(elem: ElementLike): string {
 }
 
 export function extractLanguage(elem: ElementLike): string | undefined {
-  const cls = elem.getAttribute?.('class') ?? ''
+  const cls = elem.className ?? ''
   const lang = cls.split(RE_SPLIT_WS).find(s => s.startsWith('language-'))
   return lang ? lang.slice(9) : undefined
 }
