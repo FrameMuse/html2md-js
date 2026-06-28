@@ -441,10 +441,15 @@ function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): vo
   const tag = elem.localName
   const inlines: Inline[] = []
   collectInlinesWithCodeSplit(elem, ctx, inlines)
-  if (!inlines.length) return
+  if (inlines.length <= 0) return
 
   switch (tag) {
-    case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+    case 'h1':
+    case 'h2':
+    case 'h3':
+    case 'h4':
+    case 'h5':
+    case 'h6':
       out.push({ type: BlockType.heading, level: parseInt(tag[1], 10), content: inlines })
       break
     default:
