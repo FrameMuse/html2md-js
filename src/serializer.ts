@@ -5,9 +5,7 @@ import {
   HOIST_IMAGES,
   HOIST_LINKS,
 } from './options'
-import {
-  isBlockBlank
-} from './utils'
+
 
 function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): string {
   switch (block.type) {
@@ -43,9 +41,7 @@ function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): str
 function serializeBlocks(blocks: Block[], opts: ResolvedOptions, depth: number): string {
   let out = ''
   for (let i = 0; i < blocks.length; i++) {
-    const b = blocks[i]
-    if (isBlockBlank(b)) continue
-    out += serializeBlock(b, opts, depth)
+    out += serializeBlock(blocks[i], opts, depth)
   }
   return out
 }

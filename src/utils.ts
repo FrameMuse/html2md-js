@@ -224,62 +224,6 @@ export function inlinesBlank(inlines: Inline[]): boolean {
   return true
 }
 
-export function isBlockBlank(block: Block): boolean {
-  switch (block.type) {
-    case BlockType.document: {
-      if (!block.children) return true
-      for (let i = 0; i < block.children.length; i++) {
-        if (!isBlockBlank(block.children[i])) return false
-      }
-      return true
-    }
-    case BlockType.paragraph: {
-      if (block.text !== undefined) return !block.text.trim()
-      if (!block.content) return true
-      return inlinesBlank(block.content)
-    }
-    case BlockType.heading: {
-      if (!block.content) return true
-      return inlinesBlank(block.content)
-    }
-    case BlockType.blockquote: {
-      if (!block.children) return true
-      for (let i = 0; i < block.children.length; i++) {
-        if (!isBlockBlank(block.children[i])) return false
-      }
-      return true
-    }
-    case BlockType.list: {
-      if (!block.items) return true
-      for (let i = 0; i < block.items.length; i++) {
-        const item = block.items[i]
-        if (!item.blocks || !item.blocks.length) continue
-        for (let j = 0; j < item.blocks.length; j++) {
-          if (!isBlockBlank(item.blocks[j])) return false
-        }
-      }
-      return true
-    }
-    case BlockType.codeblock: return !block.code?.trim()
-    case BlockType.table:
-      if (block.headers) {
-        for (let i = 0; i < block.headers.length; i++) {
-          if (!inlinesBlank(block.headers[i])) return false
-        }
-      }
-      if (block.rows) {
-        for (let i = 0; i < block.rows.length; i++) {
-          const row = block.rows[i]
-          for (let j = 0; j < row.length; j++) {
-            if (!inlinesBlank(row[j])) return false
-          }
-        }
-      }
-      return true
-    case BlockType.hr: return false
-  }
-}
-
 export function findChild(elem: ElementLike, tag: string): ElementLike | null {
   const ch = elem.children
   for (let i = 0; i < ch.length; i++) {

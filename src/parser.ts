@@ -53,8 +53,8 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
   out.push({ type: BlockType.blockquote, children: blocks })
 }
 
-function flushTextSlots(ctx: Context): void {
-  const slots = ctx.textSlots
+function flushTextBatchSlots(ctx: Context): void {
+  const slots = ctx.textBatchSlots
   if (!slots.length) return
   const joined = slots.map(s => s.raw).join('\x00')
   const { decoded, bOffset } = processTexts(joined)
@@ -62,11 +62,14 @@ function flushTextSlots(ctx: Context): void {
   for (let i = 0; i < bOffset; i++) {
     const segEnd = _BOUNDARY_BUF[i]
     if (segEnd > segStart) {
-      slots[i].out[slots[i].idx] = { type: InlineType.text, text: decoded.substring(segStart, segEnd) }
+      const s = slots[i]
+      const text = decoded.substring(segStart, segEnd)
+      if (s.t === 'i') s.out[s.idx] = { type: InlineType.text, text }
+      else s.out[s.idx].text = text
     }
     segStart = segEnd
   }
-  slots.length = 0
+  ctx.textBatchSlots = []
 }
 
 // ---- inline conversion ----
@@ -81,16 +84,16 @@ function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
     if (child.nodeType === TEXT_NODE) {
       const text = child.textContent ?? ''
       if (text) {
-        ctx.textSlots.push({ out, idx: out.length, raw: text })
+        ctx.textBatchSlots.push({ t: 'i', out, idx: out.length, raw: text })
         out.push(null as any)
         added = true
       }
     } else if (child.nodeType === ELEMENT_NODE) {
-      flushTextSlots(ctx)
+      // flushTextBatchSlots(ctx)
       if (convertInline(child as ElementLike, ctx, out)) added = true
     }
   }
-  flushTextSlots(ctx)
+  flushTextBatchSlots(ctx)
   return added
 }
 
@@ -280,18 +283,21 @@ function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Contex
 
 // ---- block conversion ----
 
+
+
 function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
-  if (node.nodeType === TEXT_NODE) {
-    const text = node.textContent
-    if (!text) return
-
-    const trimmed = text.trim()
-    if (!trimmed) return
-
-    out.push({ type: BlockType.paragraph, text: processText(text) })
-  }
-  if (node.nodeType === ELEMENT_NODE) {
-    convertElement(node as ElementLike, ctx, out)
+  switch (node.nodeType) {
+    case TEXT_NODE: {
+      const text = node.textContent
+      if (!text) return
+      const trimmed = text.trim()
+      if (!trimmed) return
+      ctx.textBatchSlots.push({ t: 'b', out, idx: out.length, raw: text })
+      out.push({ type: BlockType.paragraph, text: '' })
+      return
+    }
+    case ELEMENT_NODE:
+      convertElement(node as ElementLike, ctx, out)
   }
 }
 
@@ -370,10 +376,12 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
       const codeEl = findChild(elem, 'code')
       if (codeEl) {
         const codeText = getCodeText(codeEl)
+        if (!codeText.trim()) return
         const lang = extractLanguage(elem) || extractLanguage(codeEl)
         out.push({ type: BlockType.codeblock, language: lang, code: codeText, fenced: true })
       } else {
         const text = getCodeText(elem)
+        if (!text.trim()) return
         out.push({ type: BlockType.codeblock, language: extractLanguage(elem), code: text, fenced: false })
       }
       return
@@ -502,7 +510,7 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
         continue
       }
       if (!pending) pending = []
-      ctx.textSlots.push({ out: pending, idx: pending.length, raw: text })
+      ctx.textBatchSlots.push({ t: 'i', out: pending, idx: pending.length, raw: text })
       pending.push(null as any)
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
@@ -597,4 +605,4 @@ function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: 
   }
 }
 
-export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable, flushTextSlots }
+export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable, flushTextBatchSlots }
