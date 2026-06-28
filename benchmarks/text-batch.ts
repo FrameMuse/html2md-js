@@ -76,6 +76,23 @@ function batched(texts: string[]): string[] {
   return processed.split(SEP).filter(Boolean)
 }
 
+const _RE_SEP = /\x00/g
+
+function batchedExec(texts: string[]): string[] {
+  const joined = texts.join(SEP)
+  const processed = processText(joined)
+  const result: string[] = []
+  let start = 0
+  let match: RegExpExecArray | null
+  _RE_SEP.lastIndex = 0
+  while ((match = _RE_SEP.exec(processed)) !== null) {
+    if (match.index > start) result.push(processed.slice(start, match.index))
+    start = match.index + 1
+  }
+  if (start < processed.length) result.push(processed.slice(start))
+  return result
+}
+
 function batchedManual(texts: string[]): string[] {
   const joined = texts.join(SEP)
   const processed = processText(joined)
@@ -132,6 +149,7 @@ const pJoined = paragraphTexts.join(SEP)
 bench("individual (processText each)", () => individual(paragraphTexts))
 bench("batched (split+filter)", () => batched(paragraphTexts))
 bench("batched (indexOf+slice)", () => batchedManual(paragraphTexts))
+bench("batched (regex exec)", () => batchedExec(paragraphTexts))
 bench("processTexts (boundaries)", () => processTexts(pJoined))
 
 using g2 = bench.group("Many texts, few escapes (200 texts)")
@@ -140,6 +158,7 @@ const dJoined = docTexts.join(SEP)
 bench("individual (processText each)", () => individual(docTexts))
 bench("batched (split+filter)", () => batched(docTexts))
 bench("batched (indexOf+slice)", () => batchedManual(docTexts))
+bench("batched (regex exec)", () => batchedExec(docTexts))
 bench("processTexts (boundaries)", () => processTexts(dJoined))
 
 using g3 = bench.group("All plain (500 texts)")
@@ -148,6 +167,7 @@ const plJoined = plainTexts.join(SEP)
 bench("individual (processText each)", () => individual(plainTexts))
 bench("batched (split+filter)", () => batched(plainTexts))
 bench("batched (indexOf+slice)", () => batchedManual(plainTexts))
+bench("batched (regex exec)", () => batchedExec(plainTexts))
 bench("processTexts (boundaries)", () => processTexts(plJoined))
 
 using g4 = bench.group("Mixed (300 texts)")
@@ -156,4 +176,5 @@ const mJoined = mixedTexts.join(SEP)
 bench("individual (processText each)", () => individual(mixedTexts))
 bench("batched (split+filter)", () => batched(mixedTexts))
 bench("batched (indexOf+slice)", () => batchedManual(mixedTexts))
+bench("batched (regex exec)", () => batchedExec(mixedTexts))
 bench("processTexts (boundaries)", () => processTexts(mJoined))

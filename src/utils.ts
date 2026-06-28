@@ -31,41 +31,9 @@ const _DECODER = new TextDecoder()
 const _SRC_BUF = new Uint8Array(65536)
 const _DST_BUF = new Uint8Array(65536 * 2)
 
-export function escapeMarkdown(text: string): string {
-  if (!RE_ESCAPE.test(text)) return text
-  const encoded = _ENCODER.encodeInto(text, _SRC_BUF)
-  const srcLen = encoded.written
-  let destIdx = 0
-  for (let i = 0; i < srcLen; i++) {
-    const byte = _SRC_BUF[i]
-    if (byte < 128 && _ESCAPE_TABLE[byte] === 1) {
-      _DST_BUF[destIdx++] = 92
-    }
-    _DST_BUF[destIdx++] = byte
-  }
-  return _DECODER.decode(_DST_BUF.subarray(0, destIdx))
-}
 
 const _WS_TABLE = new Uint8Array(128);
 [32, 10, 13, 9].forEach(code => { _WS_TABLE[code] = 1 })
-
-export function collapseWhitespace(s: string): string {
-  if (!RE_WS.test(s)) return s
-  const encoded = _ENCODER.encodeInto(s, _SRC_BUF)
-  const srcLen = encoded.written
-  let destIdx = 0
-  let prevSpace = false
-  for (let i = 0; i < srcLen; i++) {
-    const byte = _SRC_BUF[i]
-    if (byte < 128 && _WS_TABLE[byte]) {
-      if (!prevSpace) { _DST_BUF[destIdx++] = 32; prevSpace = true }
-    } else {
-      _DST_BUF[destIdx++] = byte
-      prevSpace = false
-    }
-  }
-  return _DECODER.decode(_DST_BUF.subarray(0, destIdx))
-}
 
 export function processText(text: string): string {
   if (!RE_WS.test(text) && !RE_ESCAPE.test(text)) return text
