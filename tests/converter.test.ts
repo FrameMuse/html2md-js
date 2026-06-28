@@ -1,7 +1,9 @@
 import { describe, test, expect } from "bun:test"
 import { HtmlToMd, HOIST_IMAGES, HOIST_LINKS, SkipFlags } from "../src/index.ts"
 import type { HtmlToMdOptions } from "../src/index.ts"
-import type { ElementLike } from "../src/options.ts"
+import { parseCodeByRule } from "../src/options.ts"
+import type { CodeByRule, ElementLike } from "../src/options.ts"
+import { matchesCodeBy, processText, collapseTrim, postProcess } from "../src/utils.ts"
 import { DOMParser } from "linkedom"
 
 const parser = new DOMParser()
@@ -210,6 +212,138 @@ describe("code-by feature", () => {
 
   test("code-by no match when class absent", () => {
     expect(convert(el("<h3>plain heading</h3>"), { codeBy: ["h3.property"] })).toBe("### plain heading")
+  })
+
+  test("code-by with class-only selector on paragraph", () => {
+    expect(convert(
+      el('<p class="sig">fn(x: number): string</p>'),
+      { codeBy: [".sig"] },
+    )).toBe("`fn(x: number): string`")
+  })
+
+  test("code-by with tag-only selector", () => {
+    expect(convert(
+      el('<h4>SomeType</h4>'),
+      { codeBy: ["h4"] },
+    )).toBe("#### `SomeType`")
+  })
+
+  test("code-by multiple rules", () => {
+    expect(convert(
+      el('<h3 class="property">Foo</h3><p class="sig">Bar</p>'),
+      { codeBy: ["h3.property", ".sig"] },
+    )).toBe("### `Foo`\n\n`Bar`")
+  })
+
+  test("code-by with empty option does nothing", () => {
+    expect(convert(el("<h3>heading</h3>"), { codeBy: [] })).toBe("### heading")
+  })
+
+  test("code-by no match when class is present but wrong", () => {
+    expect(convert(
+      el('<h3 class="other">heading</h3>'),
+      { codeBy: ["h3.property"] },
+    )).toBe("### heading")
+  })
+
+  test("code-by empty element produces nothing", () => {
+    expect(convert(el('<h3 class="property"></h3>'), { codeBy: ["h3.property"] })).toBe("")
+  })
+
+  test("code-by with backticks in text uses double-backtick delimiters", () => {
+    expect(convert(
+      el('<h3 class="property">x &gt; `y` &lt; z</h3>'),
+      { codeBy: ["h3.property"] },
+    )).toBe("### ``x > `y` < z``")
+  })
+})
+
+describe("parseCodeByRule", () => {
+  test('"tag.class" returns tag and class', () => {
+    const r = parseCodeByRule("h3.property")
+    expect(r).toEqual({ tag: "h3", class: "property" })
+  })
+
+  test('".class" returns null tag and class', () => {
+    const r = parseCodeByRule(".sig")
+    expect(r).toEqual({ tag: null, class: "sig" })
+  })
+
+  test('"tag" returns tag and null class', () => {
+    const r = parseCodeByRule("h4")
+    expect(r).toEqual({ tag: "h4", class: null })
+  })
+
+  test('"." returns null for both tag and class (empty cls is coerced to null)', () => {
+    const r = parseCodeByRule(".")
+    expect(r).toEqual({ tag: null, class: null })
+  })
+
+  test('"tag." returns tag and null class (empty cls is coerced to null)', () => {
+    const r = parseCodeByRule("h3.")
+    expect(r).toEqual({ tag: "h3", class: null })
+  })
+
+  test('"tag.class.sub" splits at first dot', () => {
+    const r = parseCodeByRule("h3.foo.bar")
+    expect(r).toEqual({ tag: "h3", class: "foo.bar" })
+  })
+})
+
+describe("matchesCodeBy", () => {
+  function makeEl(tag: string, cls: string | null): ElementLike {
+    const doc = new DOMParser().parseFromString(
+      `<html><body><${tag}${cls ? ` class="${cls}"` : ""}></${tag}></body></html>`,
+      "text/html",
+    )
+    return doc.body.firstChild as ElementLike
+  }
+
+  test("matches by tag only", () => {
+    const rules: CodeByRule[] = [{ tag: "h3", class: null }]
+    expect(matchesCodeBy(makeEl("h3", null), rules)).toBe(true)
+  })
+
+  test("matches by class only", () => {
+    const rules: CodeByRule[] = [{ tag: null, class: "sig" }]
+    expect(matchesCodeBy(makeEl("p", "sig"), rules)).toBe(true)
+  })
+
+  test("matches by tag and class", () => {
+    const rules: CodeByRule[] = [{ tag: "h3", class: "property" }]
+    expect(matchesCodeBy(makeEl("h3", "property"), rules)).toBe(true)
+  })
+
+  test("no match when tag differs", () => {
+    const rules: CodeByRule[] = [{ tag: "h3", class: null }]
+    expect(matchesCodeBy(makeEl("h4", null), rules)).toBe(false)
+  })
+
+  test("no match when class differs", () => {
+    const rules: CodeByRule[] = [{ tag: null, class: "sig" }]
+    expect(matchesCodeBy(makeEl("p", "other"), rules)).toBe(false)
+  })
+
+  test("no match when class absent and rule has class", () => {
+    const rules: CodeByRule[] = [{ tag: null, class: "sig" }]
+    expect(matchesCodeBy(makeEl("p", null), rules)).toBe(false)
+  })
+
+  test("matches one of several classes", () => {
+    const rules: CodeByRule[] = [{ tag: null, class: "sig" }]
+    expect(matchesCodeBy(makeEl("p", "foo sig bar"), rules)).toBe(true)
+  })
+
+  test("second rule matches when first does not", () => {
+    const rules: CodeByRule[] = [
+      { tag: "h3", class: null },
+      { tag: null, class: "sig" },
+    ]
+    expect(matchesCodeBy(makeEl("p", "sig"), rules)).toBe(true)
+  })
+
+  test("empty rules returns false", () => {
+    expect(matchesCodeBy(makeEl("h3", null), [])).toBe(false)
   })
 })
 
@@ -438,5 +572,253 @@ describe("skip flags", () => {
       el("<header>H</header><nav>N</nav><p>Body</p><footer>F</footer>"),
       { skip: SkipFlags.HEADER | SkipFlags.FOOTER | SkipFlags.NAV },
     )).toBe("Body")
+  })
+})
+
+describe("headingStyle option", () => {
+  test("setext style for h1 uses underline", () => {
+    expect(convert(el("<h1>Title</h1>"), { headingStyle: "setext" })).toBe("Title\n=====")
+  })
+
+  test("setext style for h2 uses dashes", () => {
+    expect(convert(el("<h2>Section</h2>"), { headingStyle: "setext" })).toBe("Section\n-------")
+  })
+
+  test("setext style for h3+ still uses atx prefix", () => {
+    expect(convert(el("<h3>Sub</h3>"), { headingStyle: "setext" })).toBe("### Sub")
+  })
+
+  test("setext underline length matches text", () => {
+    expect(convert(el("<h1>Longer Title</h1>"), { headingStyle: "setext" })).toBe("Longer Title\n============")
+  })
+
+  test("default headingStyle is atx", () => {
+    expect(convert(el("<h1>Title</h1>"))).toBe("# Title")
+  })
+})
+
+describe("codeBlockStyle option", () => {
+  test("indented style uses 4-space indent", () => {
+    expect(convert(
+      el("<pre>let x = 1;\nconst y = 2;</pre>"),
+      { codeBlockStyle: "indented" },
+    )).toBe("    let x = 1;\n    const y = 2;")
+  })
+
+  test("indented style with language class on pre", () => {
+    expect(convert(
+      el('<pre class="language-ts">let x = 1;</pre>'),
+      { codeBlockStyle: "indented" },
+    )).toBe("    let x = 1;")
+  })
+
+  test("default codeBlockStyle is fenced", () => {
+    expect(convert(el("<pre><code>code</code></pre>"))).toBe("```\ncode\n```")
+  })
+})
+
+describe("bulletListMarker option", () => {
+  test("asterisk marker", () => {
+    expect(convert(el("<ul><li>A</li><li>B</li></ul>"), { bulletListMarker: "*" })).toBe("* A\n* B")
+  })
+
+  test("plus marker", () => {
+    expect(convert(el("<ul><li>A</li><li>B</li></ul>"), { bulletListMarker: "+" })).toBe("+ A\n+ B")
+  })
+})
+
+describe("hr option", () => {
+  test("custom hr string", () => {
+    expect(convert(el("<hr>"), { hr: "***" })).toBe("***")
+  })
+
+  test("underscore hr", () => {
+    expect(convert(el("<hr>"), { hr: "___" })).toBe("___")
+  })
+})
+
+describe("emDelimiter option", () => {
+  test("custom emphasis on i tag", () => {
+    expect(convert(el("<i>italic</i>"), { emDelimiter: "*" })).toBe("*italic*")
+  })
+
+  test("em tag still uses highlight regardless of emDelimiter", () => {
+    expect(convert(el("<em>highlight</em>"), { emDelimiter: "*" })).toBe("==highlight==")
+  })
+})
+
+describe("strongDelimiter option", () => {
+  test("underscore bold", () => {
+    expect(convert(el("<strong>bold</strong>"), { strongDelimiter: "__" })).toBe("__bold__")
+  })
+
+  test("underscore bold via b tag", () => {
+    expect(convert(el("<b>bold</b>"), { strongDelimiter: "__" })).toBe("__bold__")
+  })
+})
+
+describe("fence option", () => {
+  test("tilde fence", () => {
+    expect(convert(
+      el("<pre><code>code</code></pre>"),
+      { fence: "~~~" },
+    )).toBe("~~~\ncode\n~~~")
+  })
+
+  test("tilde fence with language", () => {
+    expect(convert(
+      el('<pre><code class="language-ts">let x = 1;</code></pre>'),
+      { fence: "~~~" },
+    )).toBe("~~~ts\nlet x = 1;\n~~~")
+  })
+})
+
+describe("URLs preserved as-is", () => {
+  test("URL with query params and fragment", () => {
+    expect(convert(
+      el('<a href="https://example.com/path?query=value&amp;foo=bar#section">link</a>'),
+    )).toBe("[link](https://example.com/path?query=value&foo=bar#section)")
+  })
+
+  test("URL with parentheses", () => {
+    expect(convert(
+      el('<a href="https://en.wikipedia.org/wiki/C_(programming_language)">C</a>'),
+    )).toBe("[C](https://en.wikipedia.org/wiki/C_(programming_language))")
+  })
+
+  test("URL with uppercase preserved", () => {
+    expect(convert(
+      el('<a href="HTTP://EXAMPLE.COM/Path/To/Resource">link</a>'),
+    )).toBe("[link](HTTP://EXAMPLE.COM/Path/To/Resource)")
+  })
+
+  test("URL with plus sign preserved", () => {
+    expect(convert(
+      el('<a href="https://example.com/search?q=foo+bar">link</a>'),
+    )).toBe("[link](https://example.com/search?q=foo+bar)")
+  })
+
+  test("URL with tilde preserved", () => {
+    expect(convert(
+      el('<a href="https://example.com/~user/">home</a>'),
+    )).toBe("[home](https://example.com/~user/)")
+  })
+
+  test("URL with existing percent-encoding preserved", () => {
+    expect(convert(
+      el('<a href="https://example.com/file%20name%21">link</a>'),
+    )).toBe("[link](https://example.com/file%20name%21)")
+  })
+
+  test("link title with special chars preserved", () => {
+    expect(convert(
+      el('<a href="/page" title="Title with (parens) and [brackets]">link</a>'),
+    )).toBe('[link](/page "Title with (parens) and [brackets]")')
+  })
+
+  test("image src preserved as-is", () => {
+    expect(convert(
+      el('<img src="https://example.com/images/photo.jpg?w=200&amp;h=100" alt="photo">'),
+    )).toBe("![photo](https://example.com/images/photo.jpg?w=200&h=100)")
+  })
+
+  test("image src with query and fragment", () => {
+    expect(convert(
+      el('<img src="/assets/img.png?v=2#footer" alt="img">'),
+    )).toBe("![img](/assets/img.png?v=2#footer)")
+  })
+})
+
+describe("processText", () => {
+  test("plain text returned as-is", () => {
+    expect(processText("hello world")).toBe("hello world")
+  })
+
+  test("whitespace collapsed to single space", () => {
+    expect(processText("hello\n\n\nworld")).toBe("hello world")
+  })
+
+  test("tab converted to space", () => {
+    expect(processText("hello\tworld")).toBe("hello world")
+  })
+
+  test("multiple spaces collapsed", () => {
+    expect(processText("hello    world")).toBe("hello world")
+  })
+
+  test("asterisk escaped", () => {
+    expect(processText("3 * 4")).toBe("3 \\* 4")
+  })
+
+  test("underscore escaped", () => {
+    expect(processText("_hello_")).toBe("\\_hello\\_")
+  })
+
+  test("backtick escaped", () => {
+    expect(processText("`code`")).toBe("\\`code\\`")
+  })
+
+  test("brackets escaped", () => {
+    expect(processText("[link]")).toBe("\\[link\\]")
+  })
+
+  test("hash escaped", () => {
+    expect(processText("# heading")).toBe("\\# heading")
+  })
+
+  test("non-ASCII characters not escaped or modified", () => {
+    expect(processText("café")).toBe("café")
+  })
+
+  test("exclamation escaped", () => {
+    expect(processText("Hello!")).toBe("Hello\\!")
+  })
+})
+
+describe("collapseTrim", () => {
+  test("leading newlines removed", () => {
+    expect(collapseTrim("\n\n\nhello")).toBe("hello")
+  })
+
+  test("trailing newlines removed", () => {
+    expect(collapseTrim("hello\n\n\n")).toBe("hello")
+  })
+
+  test("3+ newlines collapsed to 2", () => {
+    expect(collapseTrim("a\n\n\n\n\nb")).toBe("a\n\nb")
+  })
+
+  test("double newlines preserved", () => {
+    expect(collapseTrim("a\n\nb")).toBe("a\n\nb")
+  })
+
+  test("single newline preserved", () => {
+    expect(collapseTrim("a\nb")).toBe("a\nb")
+  })
+
+  test("no newlines unchanged", () => {
+    expect(collapseTrim("hello world")).toBe("hello world")
+  })
+})
+
+describe("postProcess", () => {
+  test("empty anchor removed", () => {
+    expect(postProcess("[​](#section)")).toBe("")
+  })
+
+  test("empty anchor with preceding whitespace removed", () => {
+    expect(postProcess(" [\u200B](#section)")).toBe("")
+  })
+
+  test("escaped hyphen unescaped", () => {
+    expect(postProcess("foo\\-bar")).toBe("foo-bar")
+  })
+
+  test("multiple escaped hyphens unescaped", () => {
+    expect(postProcess("\\- \\- \\-")).toBe("- - -")
+  })
+
+  test("normal text unchanged", () => {
+    expect(postProcess("hello world")).toBe("hello world")
   })
 })
