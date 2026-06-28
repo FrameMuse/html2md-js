@@ -3,7 +3,7 @@
 exports[`full page snapshots prerequisites page 1`] = `
 "# Prerequisites
 
-Figma plugins are lightweight web applications that extend the functionality of Figma’s products\\. Plugins are written in **JavaScript** and their UI is created with **HTML**\\.
+Figma plugins are lightweight web applications that extend the functionality of Figmas products\\. Plugins are written in **JavaScript** and their UI is created with **HTML**\\.
 
 The Figma Plugin API is intended to be easy to use\\. We do our best to abstract away the complexities of design tools and provide quality-of-life improvements such as a linter, TypeScript type definitions, and helper functions\\. However, at least some basic experience with JavaScript and HTML are necessary to build Figma plugins\\.
 
@@ -92,7 +92,7 @@ Used to specify HTML file/files that can be used in the iframe modal via [\`figm
 This field ensures the plugin supports dynamic page loading\\. The field is required for all new plugins and the value must be \`dynamic-page\`\\.
 
 - If the manifest field is included, no additional page loads will occur when the plugin is run\\.
-- If the manifest field is omitted, then running the plugin will trigger additional page loads in files with more than one page\\. The first time the plugin is run after a user opens a file, the entire file will load and Figma will show a "Loading n pages for plugin…" notification, where \`n\` is the number of pages being loaded\\.
+- If the manifest field is omitted, then running the plugin will trigger additional page loads in files with more than one page\\. The first time the plugin is run after a user opens a file, the entire file will load and Figma will show a "Loading n pages for plugin" notification, where \`n\` is the number of pages being loaded\\.
 
 If your existing plugin's manifest doesn't include this field, you should [migrate your plugin to use dynamic page loading][ref3]\\.
 
@@ -106,7 +106,7 @@ Used to specify the list of domains that your plugin is permitted to access\\. W
 
 > [!NOTE]
 > 
-> The enforcement of network access is limited only to requests made by the plugin, such as requests to a public API\\. In a situation such as a plugin rendering a website in a frame, network access limits only apply to the website's domain\\. Network access limits don’t affect the website’s resources\\.
+> The enforcement of network access is limited only to requests made by the plugin, such as requests to a public API\\. In a situation such as a plugin rendering a website in a frame, network access limits only apply to the website's domain\\. Network access limits dont affect the websites resources\\.
 
 - The list of domains that your plugin can access is displayed on your plugin's Community page\\.
 

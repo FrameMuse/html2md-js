@@ -23,6 +23,7 @@ import {
   isInlineBlank,
   matchesCodeBy,
   processText,
+  processTexts,
 } from './utils'
 
 const INLINE_CONTAINERS = new Set(['span', 'small', 'mark', 'abbr', 'cite', 'q', 'sub', 'sup', 'time'])
@@ -58,19 +59,33 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
 function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
   let added = false
   const cn = node.childNodes
+  const texts: string[] = []
+  const indices: number[] = []
+  function flush() {
+    if (!texts.length) return
+    const processed = processTexts(texts.join('\x00'))
+    for (let j = 0; j < processed.length; j++) {
+      if (processed[j]) out[indices[j]] = { type: InlineType.text, text: processed[j] }
+    }
+    texts.length = 0
+    indices.length = 0
+  }
   for (let i = 0; i < cn.length; i++) {
     const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       const text = (child as TextLike).textContent ?? ''
-      const s = processText(text)
-      if (s) {
-        out.push({ type: InlineType.text, text: s })
+      if (text) {
+        texts.push(text)
+        indices.push(out.length)
+        out.push(null as any)
         added = true
       }
     } else if (child.nodeType === ELEMENT_NODE) {
+      flush()
       if (convertInline(child as ElementLike, ctx, out)) added = true
     }
   }
+  flush()
   return added
 }
 

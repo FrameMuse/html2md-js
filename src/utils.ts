@@ -88,6 +88,46 @@ export function processText(text: string): string {
   return _DECODER.decode(_DST_BUF.subarray(0, di))
 }
 
+const _BOUNDARY_BUF = new Uint32Array(10000)
+
+export function processTexts(joined: string): string[] {
+  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) return joined.split('\x00')
+
+  const srcLen = _ENCODER.encodeInto(joined, _SRC_BUF).written
+  let di = 0
+  let prevSpace = false
+  let bOffset = 0
+  let byte = 0
+  for (let i = 0; i < srcLen; i++) {
+    byte = _SRC_BUF[i]
+    if (byte === 0) {
+      _BOUNDARY_BUF[bOffset++] = di
+      prevSpace = false
+      continue
+    }
+    if (byte < 128) {
+      if (_WS_TABLE[byte]) {
+        if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
+        continue
+      }
+      if (_ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
+      _DST_BUF[di++] = byte
+    }
+    prevSpace = false
+  }
+  _BOUNDARY_BUF[bOffset++] = di
+
+  const all = _DECODER.decode(_DST_BUF.subarray(0, di))
+  const out = new Array<string>(bOffset)
+  let segStart = 0
+  for (let i = 0; i < bOffset; i++) {
+    const segEnd = _BOUNDARY_BUF[i]
+    if (segEnd > segStart) out[i] = all.substring(segStart, segEnd)
+    segStart = segEnd
+  }
+  return out
+}
+
 export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {
   const tag = elem.localName
   const rawCls = elem.getAttribute?.('class')
