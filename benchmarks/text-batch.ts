@@ -15,20 +15,23 @@ const RE_WS = /\s/
 const RE_ESCAPE = /[\\*_`\[\]{}()#+\-\.!]/
 
 function processTexts(joined: string): string[] {
-  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) return joined.split(SEP).filter(Boolean)
+  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined))
+    return joined.split(SEP).filter(Boolean)
 
-  const encoded = _ENCODER.encodeInto(joined, _SRC_BUF)
-  const srcLen = encoded.written
+  const { written: srcLen } = _ENCODER.encodeInto(joined, _SRC_BUF)
   let di = 0
-  let segStart = 0
   let prevSpace = false
-  const out: string[] = []
+
+  // Count segments to pre-allocate
+  let segCount = 1
+  for (let i = 0; i < srcLen; i++) if (_SRC_BUF[i] === 0) segCount++
+  const boundaries = new Uint16Array(segCount)
+  let bIdx = 0
 
   for (let i = 0; i < srcLen; i++) {
     const byte = _SRC_BUF[i]
     if (byte === 0) {
-      if (di > segStart) out.push(_DECODER.decode(_DST_BUF.subarray(segStart, di)))
-      segStart = di
+      boundaries[bIdx++] = di
       prevSpace = false
       continue
     }
@@ -40,9 +43,20 @@ function processTexts(joined: string): string[] {
     if (byte < 128 && _ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
     _DST_BUF[di++] = byte
   }
-  if (di > segStart) out.push(_DECODER.decode(_DST_BUF.subarray(segStart, di)))
+  boundaries[bIdx] = di
+
+  const all = _DECODER.decode(_DST_BUF.subarray(0, di))
+  const out = new Array<string>(segCount)
+  let segStart = 0
+  for (let i = 0; i < segCount; i++) {
+    const segEnd = boundaries[i]
+    if (segEnd > segStart) out[i] = all.slice(segStart, segEnd)
+    segStart = segEnd
+  }
   return out
 }
+
+// ---- baseline variants ----
 
 function individual(texts: string[]): string[] {
   const out: string[] = []
@@ -114,25 +128,25 @@ const pJoined = paragraphTexts.join(SEP)
 bench("individual (processText each)", () => individual(paragraphTexts))
 bench("batched (split+filter)", () => batched(paragraphTexts))
 bench("batched (indexOf+slice)", () => batchedManual(paragraphTexts))
-bench("processTexts (byte-level)", () => processTexts(pJoined))
+bench("processTexts (boundaries)", () => processTexts(pJoined))
 
 using g2 = bench.group("Many texts, few escapes (200 texts)")
 const dJoined = docTexts.join(SEP)
 bench("individual (processText each)", () => individual(docTexts))
 bench("batched (split+filter)", () => batched(docTexts))
 bench("batched (indexOf+slice)", () => batchedManual(docTexts))
-bench("processTexts (byte-level)", () => processTexts(dJoined))
+bench("processTexts (boundaries)", () => processTexts(dJoined))
 
 using g3 = bench.group("All plain (500 texts)")
 const plJoined = plainTexts.join(SEP)
 bench("individual (processText each)", () => individual(plainTexts))
 bench("batched (split+filter)", () => batched(plainTexts))
 bench("batched (indexOf+slice)", () => batchedManual(plainTexts))
-bench("processTexts (byte-level)", () => processTexts(plJoined))
+bench("processTexts (boundaries)", () => processTexts(plJoined))
 
 using g4 = bench.group("Mixed (300 texts)")
 const mJoined = mixedTexts.join(SEP)
 bench("individual (processText each)", () => individual(mixedTexts))
 bench("batched (split+filter)", () => batched(mixedTexts))
 bench("batched (indexOf+slice)", () => batchedManual(mixedTexts))
-bench("processTexts (byte-level)", () => processTexts(mJoined))
+bench("processTexts (boundaries)", () => processTexts(mJoined))
