@@ -1,2 +1,4 @@
 .cpuprofile
 node_modules
+build
+*.tsbuildinfo

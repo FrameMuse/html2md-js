@@ -13,11 +13,14 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": ".",
+    "outDir": "build",
     "strict": true,
     "noFallthroughCasesInSwitch": true,
     "noEmitOnError": false,
     "noImplicitOverride": true,
     "types": ["bun"]
   },
-  "include": ["src", "tests"]
+  "include": ["src"]
 }

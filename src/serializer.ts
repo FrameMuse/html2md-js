@@ -1,233 +1,177 @@
-import type { Block, Inline, ResolvedOptions } from './options'
-import {
-  BlockType,
-  InlineType,
-  HOIST_IMAGES,
-  HOIST_LINKS,
-} from './options'
+import type { Block, ListItem, ResolvedOptions } from './options'
+import { BlockType } from './options'
 
+const HEADING_PREFIX = [
+  '',         // 0 unused
+  '# ',       // h1
+  '## ',      // h2
+  '### ',     // h3
+  '#### ',    // h4
+  '##### ',   // h5
+  '###### ',  // h6
+]
 
-function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): string {
+const INDENT_CACHE: string[] = ['']
+function indentStr(depth: number): string {
+  while (depth >= INDENT_CACHE.length) {
+    INDENT_CACHE.push(INDENT_CACHE[INDENT_CACHE.length - 1] + '  ')
+  }
+  return INDENT_CACHE[depth]
+}
+
+function _serializeBlock(block: Block, opts: ResolvedOptions, depth: number, out: string[]): void {
   switch (block.type) {
     case BlockType.document:
-      return serializeBlocks(block.children ?? [], opts, depth)
+      _serializeBlocks(block.children ?? [], opts, depth, out)
+      break
 
     case BlockType.heading:
-      return serializeHeading(block.level!, block.content!, opts)
+      if (block.text) {
+        if (opts.headingStyle === 'setext' && block.level! <= 2) {
+          out.push(block.text, '\n', (block.level === 1 ? '=' : '-').repeat(block.text.length), '\n\n')
+        } else {
+          out.push(HEADING_PREFIX[block.level!], block.text, '\n\n')
+        }
+      }
+      break
 
     case BlockType.paragraph:
-      return serializeParagraph(block.content, block.text, opts)
+      if (block.text) out.push(block.text, '\n\n')
+      break
 
     case BlockType.blockquote:
-      return serializeBlockQuote(block.children ?? [], opts, depth)
+      _serializeBlockQuote(block.children ?? [], opts, depth, out)
+      break
 
     case BlockType.list:
-      return serializeList(block.ordered!, block.start ?? 1, block.items ?? [], opts, depth)
+      _serializeList(block.ordered!, block.start ?? 1, block.items ?? [], opts, depth, out)
+      break
 
     case BlockType.codeblock:
-      return serializeCodeBlock(block.language, block.code ?? '', block.fenced ?? true, opts)
+      _serializeCodeBlock(block.language, block.code ?? '', block.fenced ?? true, opts, out)
+      break
 
     case BlockType.hr:
-      return opts.hr + '\n\n'
+      out.push(opts.hr, '\n\n')
+      break
 
     case BlockType.table:
-      return serializeTable(block.headers ?? [], block.rows ?? [], opts)
-
-    default:
-      return ''
+      _serializeTable(block.headerTexts ?? [], block.rowTexts ?? [], out)
+      break
   }
 }
 
-function serializeBlocks(blocks: Block[], opts: ResolvedOptions, depth: number): string {
-  let out = ''
+export function _serializeBlocks(blocks: Block[], opts: ResolvedOptions, depth: number, out: string[]): void {
   for (let i = 0; i < blocks.length; i++) {
-    out += serializeBlock(blocks[i], opts, depth)
+    _serializeBlock(blocks[i], opts, depth, out)
   }
-  return out
 }
 
-function serializeHeading(level: number, content: Inline[], opts: ResolvedOptions): string {
-  let text = serializeInlines(content, opts)
-  if (!text.trim()) return ''
-  if (opts.headingStyle === 'setext' && level <= 2) {
-    let underline = level === 1 ? '=' : '-'
-    return text + '\n' + underline.repeat(text.length) + '\n\n'
-  }
-  return '#'.repeat(level) + ' ' + text + '\n\n'
-}
+function _serializeBlockQuote(blocks: Block[], opts: ResolvedOptions, depth: number, out: string[]): void {
+  const innerOut: string[] = []
+  _serializeBlocks(blocks, opts, depth, innerOut)
+  const content = innerOut.join('').trimEnd()
+  if (!content) return
 
-function serializeParagraph(content: Inline[] | undefined, text: string | undefined, opts: ResolvedOptions): string {
-  const s = text ?? serializeInlines(content ?? [], opts)
-  if (!s.trim()) return ''
-  return s + '\n\n'
-}
-
-function serializeBlockQuote(blocks: Block[], opts: ResolvedOptions, depth: number): string {
-  let content = serializeBlocks(blocks, opts, depth)
-  content = content.trimEnd()
-  if (!content) return ''
-  let lines = content.split('\n')
-  let out = lines.map((line, i) => {
-    if (i > 0 && line.startsWith('>')) return line
-    return '> ' + (line.startsWith('>') ? '' : line)
-  }).join('\n')
-  return out + '\n\n'
-}
-
-function serializeList(ordered: boolean, start: number, items: ListItem[], opts: ResolvedOptions, depth: number): string {
-  let indent = '  '.repeat(depth)
-  let out = ''
-  for (let i = 0; i < items.length; i++) {
-    out += indent
-    if (ordered) {
-      let num = start + i
-      out += num + '.  '
-    } else {
-      out += opts.bulletListMarker + ' '
+  let start = 0
+  for (let i = 0; i <= content.length; i++) {
+    if (i === content.length || content[i] === '\n') {
+      const line = content.slice(start, i)
+      out.push('> ')
+      if (!line.startsWith('>')) out.push(line)
+      else out.push(line.slice(1))
+      if (i < content.length) out.push('\n')
+      start = i + 1
     }
-    let prefixLen = ordered ? (start + i).toString().length + 3 : 2
-    out += serializeListItem(items[i], opts, depth + 1, prefixLen, indent)
   }
-  out += '\n'
-  return out
+  out.push('\n\n')
 }
 
-function serializeListItem(item: ListItem, opts: ResolvedOptions, _depth: number, _prefixLen: number, _indent: string): string {
-  let content = ''
+function _serializeList(ordered: boolean, start: number, items: ListItem[], opts: ResolvedOptions, depth: number, out: string[]): void {
+  const ind = indentStr(depth)
+  for (let i = 0; i < items.length; i++) {
+    out.push(ind)
+    if (ordered) {
+      out.push(String(start + i), '.  ')
+    } else {
+      out.push(opts.bulletListMarker, ' ')
+    }
+    _serializeListItem(items[i], opts, depth + 1, out)
+  }
+  out.push('\n')
+}
+
+function _serializeListItem(item: ListItem, opts: ResolvedOptions, depth: number, out: string[]): void {
   for (let i = 0; i < item.blocks.length; i++) {
     const b = item.blocks[i]
     const next = i < item.blocks.length - 1 ? item.blocks[i + 1] : null
     if (b.type === BlockType.paragraph) {
-      content += b.text ?? serializeInlines(b.content ?? [], opts)
-      if (next && next.type === BlockType.list) content += '\n'
-      else if (next) content += '\n\n'
+      out.push(b.text ?? '')
+      if (next && next.type === BlockType.list) out.push('\n')
+      else if (next) out.push('\n\n')
     } else if (b.type === BlockType.list) {
-      content += serializeBlock(b, opts, _depth)
+      _serializeBlock(b, opts, depth, out)
     } else {
-      content += serializeBlock(b, opts, _depth)
+      _serializeBlock(b, opts, depth, out)
     }
   }
-  return content + '\n'
+  out.push('\n')
 }
 
-function serializeCodeBlock(language: string | undefined, code: string, fenced: boolean, opts: ResolvedOptions): string {
-  let useFenced = fenced || opts.codeBlockStyle === 'fenced'
+function _serializeCodeBlock(language: string | undefined, code: string, fenced: boolean, opts: ResolvedOptions, out: string[]): void {
+  const useFenced = fenced || opts.codeBlockStyle === 'fenced'
   if (useFenced) {
-    return opts.fence + (language ?? '') + '\n' + code + '\n' + opts.fence + '\n\n'
+    out.push(opts.fence, language ?? '', '\n', code, '\n', opts.fence, '\n\n')
+  } else {
+    for (let i = 0; i < code.length; i++) {
+      if (i === 0 || code[i - 1] === '\n') out.push('    ')
+      out.push(code[i])
+    }
+    out.push('\n\n')
   }
-  return code.split('\n').map(l => '    ' + l).join('\n') + '\n\n'
 }
 
-function serializeTable(headers: Inline[][], rows: Inline[][][], opts: ResolvedOptions): string {
-  if (!headers.length && !rows.length) return ''
+function _serializeTable(headerTexts: string[], rowTexts: string[][], out: string[]): void {
+  if (!headerTexts.length && !rowTexts.length) return
 
-  let colCount = headers.length
-  for (let r = 0; r < rows.length; r++) {
-    if (rows[r].length > colCount) colCount = rows[r].length
+  let colCount = headerTexts.length
+  for (let r = 0; r < rowTexts.length; r++) {
+    if (rowTexts[r].length > colCount) colCount = rowTexts[r].length
   }
 
-  const cell = (text: string) => {
-    if (text) return ' ' + text
-    return ''
-  }
-
-  let out = '|'
+  out.push('|')
   for (let i = 0; i < colCount; i++) {
-    let text = i < headers.length ? serializeInlines(headers[i], opts) : ''
-    out += cell(text) + ' |'
+    if (i < headerTexts.length && headerTexts[i]) out.push(' ', headerTexts[i])
+    out.push(' |')
   }
-  out += '\n|'
-  for (let i = 0; i < colCount; i++) {
-    out += ' --- |'
-  }
-  out += '\n'
+  out.push('\n|')
+  for (let i = 0; i < colCount; i++) out.push(' --- |')
+  out.push('\n')
 
-  for (let r = 0; r < rows.length; r++) {
-    const row = rows[r]
-    out += '|'
+  for (let r = 0; r < rowTexts.length; r++) {
+    const row = rowTexts[r]
+    out.push('|')
     for (let i = 0; i < colCount; i++) {
-      let content = i < row.length ? row[i] : []
-      let text = serializeInlines(content, opts)
-      out += cell(text) + ' |'
+      if (i < row.length && row[i]) out.push(' ', row[i])
+      out.push(' |')
     }
-    out += '\n'
+    out.push('\n')
   }
-  out += '\n'
-  return out
+  out.push('\n')
 }
 
-// ---- inline serialization ----
+// ---- public API wrappers ----
 
-function serializeInlines(inlines: Inline[], opts: ResolvedOptions): string {
-  let out = ''
-  for (let i = 0; i < inlines.length; i++) {
-    out += serializeInline(inlines[i], opts)
-  }
-  return out
+function serializeBlocks(blocks: Block[], opts: ResolvedOptions, depth: number): string {
+  const out: string[] = []
+  _serializeBlocks(blocks, opts, depth, out)
+  return out.join('')
 }
 
-function serializeInline(inline: Inline, opts: ResolvedOptions): string {
-  switch (inline.type) {
-    case InlineType.text:
-      return inline.text ?? ''
-
-    case InlineType.strong: {
-      let inner = serializeInlines(inline.children ?? [], opts)
-      if (!inner.trim()) return ''
-      return opts.strongDelimiter + inner + opts.strongDelimiter
-    }
-
-    case InlineType.emphasis: {
-      let inner = serializeInlines(inline.children ?? [], opts)
-      if (!inner.trim()) return ''
-      return opts.emDelimiter + inner + opts.emDelimiter
-    }
-
-    case InlineType.highlight: {
-      let inner = serializeInlines(inline.children ?? [], opts)
-      if (!inner.trim()) return ''
-      return '==' + inner + '=='
-    }
-
-    case InlineType.code: {
-      let text = inline.text ?? ''
-      if (!text) return ''
-      let bt = text.includes('`') ? '``' : '`'
-      let space = (text.startsWith('`') || text.endsWith('`')) ? ' ' : ''
-      return bt + space + text + space + bt
-    }
-
-    case InlineType.link: {
-      let content = serializeInlines(inline.children ?? [], opts)
-      let url = inline.url ?? ''
-      if (opts.flags & HOIST_LINKS && url) {
-        return '[' + content + '][' + opts.hoisted.addLink(url, content, inline.title).ref + ']'
-      }
-      let out = '[' + content + '](' + url
-      if (inline.title && inline.title !== content) out += ' "' + inline.title + '"'
-      out += ')'
-      return out
-    }
-
-    case InlineType.image: {
-      let alt = inline.alt ?? ''
-      let url = inline.url ?? ''
-      let title = inline.title
-      if (opts.flags & HOIST_IMAGES) {
-        return '![' + alt + '][' + opts.hoisted.addImage(url, title).ref + ']'
-      }
-      let out = '![' + alt + '](' + url
-      if (title) out += ' "' + title + '"'
-      out += ')'
-      return out
-    }
-
-    case InlineType.linebreak:
-      return '  \n'
-
-    default:
-      return ''
-  }
+function serializeBlock(block: Block, opts: ResolvedOptions, depth: number): string {
+  const out: string[] = []
+  _serializeBlock(block, opts, depth, out)
+  return out.join('')
 }
 
-export { serializeBlock, serializeBlocks, serializeInlines }
+export { serializeBlock, serializeBlocks }

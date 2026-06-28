@@ -89,32 +89,20 @@ export interface ResolvedOptions {
   hoisted: HoistedMap
 }
 
-export enum InlineType {
-  text = 'text',
-  strong = 'strong',
-  emphasis = 'emphasis',
-  highlight = 'highlight',
-  code = 'code',
-  link = 'link',
-  image = 'image',
-  linebreak = 'linebreak',
-}
-
 export enum BlockType {
-  document = 'document',
-  heading = 'heading',
-  paragraph = 'paragraph',
-  blockquote = 'blockquote',
-  list = 'list',
-  codeblock = 'codeblock',
-  hr = 'hr',
-  table = 'table',
+  document = 0,
+  heading = 1,
+  paragraph = 2,
+  blockquote = 3,
+  list = 4,
+  codeblock = 5,
+  hr = 6,
+  table = 7,
 }
 
 export interface Block {
   type: BlockType
   level?: number
-  content?: Inline[]
   text?: string
   children?: Block[]
   ordered?: boolean
@@ -123,26 +111,16 @@ export interface Block {
   language?: string
   code?: string
   fenced?: boolean
-  headers?: Inline[][]
-  rows?: Inline[][][]
+  headerTexts?: string[]
+  rowTexts?: string[][]
 }
 
 export interface ListItem {
   blocks: Block[]
 }
 
-export interface Inline {
-  type: InlineType
-  text?: string
-  children?: Inline[]
-  url?: string
-  title?: string
-  alt?: string
-}
-
 export interface TextBatchSlot {
-  t: 'i' | 'b'
-  out: Inline[] | Block[]
+  out: string[]
   idx: number
 }
 
@@ -223,5 +201,5 @@ export function parseCodeByRule(s: string): CodeByRule {
 }
 
 export function makeCtx(opts: ResolvedOptions): Context {
-  return { options: opts, inList: false }
+  return { options: opts, inList: false, textBatchSlots: [], textBatchRaw: [] }
 }

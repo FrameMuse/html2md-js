@@ -3,12 +3,26 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "./build/index.js",
+  "types": "./build/src/index.d.ts",
+  "files": [
+    "build"
+  ],
   "scripts": {
+    "build": "vite build && tsc",
     "test": "bun test",
     "bench": "bun benchmarks/conversion.ts && bun benchmarks/escape.ts && bun benchmarks/internal.ts"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/bun": "^1.3.14",
-    "linkedom": "^0.18.12"
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "eslint": "^10.6.0",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "linkedom": "^0.18.12",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0"
   }
 }

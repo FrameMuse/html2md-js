@@ -1,7 +1,7 @@
 import { DOMParser } from "linkedom"
 import { HtmlToMd } from "../src/index.ts"
 
-import figmaHtml from "../tests/fixtures/figma-manifest.html" with { type: "text" }
+import figmaHtml from "../tests/fixtures/3mortar-pit.html" with { type: "text" }
 
 const domParser = new DOMParser
 const figmaDoc = domParser.parseFromString(figmaHtml, "text/html")

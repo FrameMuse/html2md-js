@@ -2,12 +2,8 @@ import {
   type Block,
   type CodeByRule,
   type ElementLike,
-  type Inline,
-  type ListItem,
   type NodeLike,
-  type TextLike,
   BlockType,
-  InlineType,
   BLOCK_TAGS,
   ELEMENT_NODE,
   TEXT_NODE
@@ -31,7 +27,6 @@ const _DECODER = new TextDecoder()
 const _SRC_BUF = new Uint8Array(65536)
 const _DST_BUF = new Uint8Array(65536 * 2)
 
-
 const _WS_TABLE = new Uint8Array(128);
 [32, 10, 13, 9].forEach(code => { _WS_TABLE[code] = 1 })
 
@@ -43,60 +38,15 @@ export function processText(text: string): string {
   let prevSpace = false
   for (let i = 0; i < srcLen; i++) {
     const byte = _SRC_BUF[i]
-    // collapse whitespace
     if (byte < 128 && _WS_TABLE[byte]) {
       if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
       continue
     }
     prevSpace = false
-    // escape markdown
     if (byte < 128 && _ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
     _DST_BUF[di++] = byte
   }
   return _DECODER.decode(_DST_BUF.subarray(0, di))
-}
-
-export const _BOUNDARY_BUF = new Uint32Array(10000)
-
-export interface ProcessedTexts {
-  decoded: string
-  bOffset: number
-}
-
-export function processTexts(joined: string): ProcessedTexts {
-  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) {
-    let bi = 0
-    for (let i = 0; i < joined.length; i++) {
-      if (joined[i] === '\x00') _BOUNDARY_BUF[bi++] = i
-    }
-    _BOUNDARY_BUF[bi++] = joined.length
-    return { decoded: joined, bOffset: bi }
-  }
-
-  const srcLen = _ENCODER.encodeInto(joined, _SRC_BUF).written
-  let di = 0
-  let prevSpace = false
-  let bOffset = 0
-  for (let i = 0; i < srcLen; i++) {
-    const byte = _SRC_BUF[i]
-    if (byte === 0) {
-      _BOUNDARY_BUF[bOffset++] = di
-      prevSpace = false
-      continue
-    }
-    if (byte < 128) {
-      if (_WS_TABLE[byte]) {
-        if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
-        continue
-      }
-      if (_ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
-      _DST_BUF[di++] = byte
-    }
-    prevSpace = false
-  }
-  _BOUNDARY_BUF[bOffset++] = di
-
-  return { decoded: _DECODER.decode(_DST_BUF.subarray(0, di)), bOffset }
 }
 
 export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {
@@ -162,36 +112,6 @@ export function hasLinkChildren(elem: ElementLike): boolean {
   return false
 }
 
-export function isInlineBlank(i: Inline): boolean {
-  switch (i.type) {
-    case InlineType.text: return !i.text || !i.text.trim()
-    case InlineType.strong: case InlineType.emphasis: case InlineType.highlight: {
-      if (!i.children) return true
-      for (let j = 0; j < i.children.length; j++) {
-        if (!isInlineBlank(i.children[j])) return false
-      }
-      return true
-    }
-    case InlineType.code: return !i.text
-    case InlineType.link: {
-      if (!i.children) return true
-      for (let j = 0; j < i.children.length; j++) {
-        if (!isInlineBlank(i.children[j])) return false
-      }
-      return true
-    }
-    case InlineType.image: return false
-    case InlineType.linebreak: return false
-  }
-}
-
-export function inlinesBlank(inlines: Inline[]): boolean {
-  for (let i = 0; i < inlines.length; i++) {
-    if (!isInlineBlank(inlines[i])) return false
-  }
-  return true
-}
-
 export function findChild(elem: ElementLike, tag: string): ElementLike | null {
   const ch = elem.children
   for (let i = 0; i < ch.length; i++) {
@@ -222,12 +142,6 @@ export function extractLanguage(elem: ElementLike): string | undefined {
   return lang?.slice(9)
 }
 
-export function addPendingInline(blocks: Block[], pending: Inline[] | null) {
-  if (pending && pending.length > 0) {
-    blocks.push(blockParagraph(pending))
-  }
-}
-
 export function collapseTrim(s: string): string {
   return s
     .replace(RE_TRIM_NEWLINES, '')
@@ -240,18 +154,6 @@ export function postProcess(md: string): string {
     .replace(RE_UNESCAPE_HYPHEN, '-')
 }
 
-export function blockParagraph(content: Inline[]): Block {
-  return { type: BlockType.paragraph, content }
-}
-
-export function blockBlockQuote(children: Block[]): Block {
-  return { type: BlockType.blockquote, children }
-}
-
-export function blockList(ordered: boolean, items: ListItem[], start?: number): Block {
-  return { type: BlockType.list, ordered, items, start: start ?? 1 }
-}
-
-export function blockCodeBlock(language: string | undefined, code: string, fenced: boolean): Block {
-  return { type: BlockType.codeblock, language, code, fenced }
+export function blockParagraph(text: string): Block {
+  return { type: BlockType.paragraph, text }
 }

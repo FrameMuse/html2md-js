@@ -6,9 +6,9 @@ import {
 import {
   convertChildren,
   flushTextBatchSlots,
-} from './parser'
+} from './walker'
 import {
-  serializeBlocks,
+  _serializeBlocks,
 } from './serializer'
 import {
   collapseTrim,
@@ -47,7 +47,9 @@ export class HtmlToMd {
     const blocks: Block[] = []
     convertChildren(input, this.ctx, blocks)
     flushTextBatchSlots(this.ctx)
-    let result = serializeBlocks(blocks, this.opts, 0)
+    const out: string[] = []
+    _serializeBlocks(blocks, this.opts, 0, out)
+    let result = out.join('')
     result = collapseTrim(result)
     result = postProcess(result)
     if (this.opts.hoisted.size) result += '\n\n' + this.opts.hoisted.footer
