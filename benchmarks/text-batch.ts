@@ -1,6 +1,10 @@
 import { bench } from "benchik"
 import { processText } from "../src/utils.ts"
 
+const SEP = "\x00"
+
+// ---- batch processing variants ----
+
 function individual(texts: string[]): string[] {
   const out: string[] = []
   for (const t of texts) {
@@ -10,12 +14,27 @@ function individual(texts: string[]): string[] {
   return out
 }
 
-const SEP = "\x00"
-
 function batched(texts: string[]): string[] {
   const joined = texts.join(SEP)
   const processed = processText(joined)
   return processed.split(SEP).filter(Boolean)
+}
+
+function batchedManual(texts: string[]): string[] {
+  const joined = texts.join(SEP)
+  const processed = processText(joined)
+  const result: string[] = []
+  let start = 0
+  while (true) {
+    const idx = processed.indexOf(SEP, start)
+    if (idx === -1) {
+      if (start < processed.length) result.push(processed.slice(start))
+      break
+    }
+    if (idx > start) result.push(processed.slice(start, idx))
+    start = idx + 1
+  }
+  return result
 }
 
 function batchedSmart(texts: string[]): string[] {
@@ -27,8 +46,21 @@ function batchedSmart(texts: string[]): string[] {
 
   const joined = texts.join(SEP)
   const processed = processText(joined)
-  return processed.split(SEP).filter(Boolean)
+  const result: string[] = []
+  let start = 0
+  while (true) {
+    const idx = processed.indexOf(SEP, start)
+    if (idx === -1) {
+      if (start < processed.length) result.push(processed.slice(start))
+      break
+    }
+    if (idx > start) result.push(processed.slice(start, idx))
+    start = idx + 1
+  }
+  return result
 }
+
+// ---- test data ----
 
 const paragraphTexts = [
   "Hello world",
@@ -59,22 +91,28 @@ for (let i = 0; i < 100; i++) {
   mixedTexts.push("more plain ")
 }
 
+// ---- benchmarks ----
+
 using g1 = bench.group("Paragraph-sized (7 texts)")
 bench("individual (processText each)", () => individual(paragraphTexts))
-bench("batched (join+split)", () => batched(paragraphTexts))
-bench("batched+smart (test+join+split)", () => batchedSmart(paragraphTexts))
+bench("batched (split+filter)", () => batched(paragraphTexts))
+bench("batched (manual split)", () => batchedManual(paragraphTexts))
+bench("batched+smart (manual split)", () => batchedSmart(paragraphTexts))
 
 using g2 = bench.group("Many texts, few escapes (200 texts)")
 bench("individual (processText each)", () => individual(docTexts))
-bench("batched (join+split)", () => batched(docTexts))
-bench("batched+smart (test+join+split)", () => batchedSmart(docTexts))
+bench("batched (split+filter)", () => batched(docTexts))
+bench("batched (manual split)", () => batchedManual(docTexts))
+bench("batched+smart (manual split)", () => batchedSmart(docTexts))
 
 using g3 = bench.group("All plain (500 texts)")
 bench("individual (processText each)", () => individual(plainTexts))
-bench("batched (join+split)", () => batched(plainTexts))
-bench("batched+smart (test+join+split)", () => batchedSmart(plainTexts))
+bench("batched (split+filter)", () => batched(plainTexts))
+bench("batched (manual split)", () => batchedManual(plainTexts))
+bench("batched+smart (manual split)", () => batchedSmart(plainTexts))
 
 using g4 = bench.group("Mixed (300 texts)")
 bench("individual (processText each)", () => individual(mixedTexts))
-bench("batched (join+split)", () => batched(mixedTexts))
-bench("batched+smart (test+join+split)", () => batchedSmart(mixedTexts))
+bench("batched (split+filter)", () => batched(mixedTexts))
+bench("batched (manual split)", () => batchedManual(mixedTexts))
+bench("batched+smart (manual split)", () => batchedSmart(mixedTexts))
