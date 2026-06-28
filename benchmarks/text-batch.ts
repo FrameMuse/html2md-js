@@ -14,38 +14,46 @@ const SEP = "\x00"
 const RE_WS = /\s/
 const RE_ESCAPE = /[\\*_`\[\]{}()#+\-\.!]/
 
+const boundaries = new Uint16Array(1_000_000)
 function processTexts(joined: string): string[] {
-  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) return joined.split(SEP).filter(Boolean)
-
+if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) {
+    // This extracts all non-null segments instantly, native-side, skipping empty items
+    return joined.split("\x00")
+  }
   const srcLen = _ENCODER.encodeInto(joined, _SRC_BUF).written
   let di = 0
   let prevSpace = false
 
-  const boundaries: number[] = []
+  let bOffset = 0
+  let byte = 0
   for (let i = 0; i < srcLen; i++) {
-    const byte = _SRC_BUF[i]
+    byte = _SRC_BUF[i]
     if (byte === 0) {
-      boundaries.push(di)
+      boundaries[bOffset++] = di
       prevSpace = false
       continue
     }
-    if (byte < 128 && _WS_TABLE[byte]) {
-      if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
-      continue
+    if (byte < 128) {
+      if (_WS_TABLE[byte]) {
+        if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
+        continue
+      }
+
+      if (_ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
+      _DST_BUF[di++] = byte
     }
     prevSpace = false
-    if (byte < 128 && _ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
-    _DST_BUF[di++] = byte
   }
-  boundaries.push(di)
+  boundaries[bOffset++] = di
 
+  // Zero object allocations
   const all = _DECODER.decode(_DST_BUF.subarray(0, di))
-  const segCount = boundaries.length
-  const out = new Array<string>(segCount)
+
+  const out = new Array<string>(bOffset)
   let segStart = 0
-  for (let i = 0; i < segCount; i++) {
+  for (let i = 0; i < bOffset; i++) {
     const segEnd = boundaries[i]
-    if (segEnd > segStart) out[i] = all.slice(segStart, segEnd)
+    if (segEnd > segStart) out[i] = all.substring(segStart, segEnd)
     segStart = segEnd
   }
   return out
@@ -119,6 +127,7 @@ for (let i = 0; i < 100; i++) {
 // ---- benchmarks ----
 
 using g1 = bench.group("Paragraph-sized (7 texts)")
+g1.assert = individual(paragraphTexts)
 const pJoined = paragraphTexts.join(SEP)
 bench("individual (processText each)", () => individual(paragraphTexts))
 bench("batched (split+filter)", () => batched(paragraphTexts))
@@ -126,6 +135,7 @@ bench("batched (indexOf+slice)", () => batchedManual(paragraphTexts))
 bench("processTexts (boundaries)", () => processTexts(pJoined))
 
 using g2 = bench.group("Many texts, few escapes (200 texts)")
+g2.assert = individual(docTexts)
 const dJoined = docTexts.join(SEP)
 bench("individual (processText each)", () => individual(docTexts))
 bench("batched (split+filter)", () => batched(docTexts))
@@ -133,6 +143,7 @@ bench("batched (indexOf+slice)", () => batchedManual(docTexts))
 bench("processTexts (boundaries)", () => processTexts(dJoined))
 
 using g3 = bench.group("All plain (500 texts)")
+g3.assert = individual(plainTexts)
 const plJoined = plainTexts.join(SEP)
 bench("individual (processText each)", () => individual(plainTexts))
 bench("batched (split+filter)", () => batched(plainTexts))
@@ -140,6 +151,7 @@ bench("batched (indexOf+slice)", () => batchedManual(plainTexts))
 bench("processTexts (boundaries)", () => processTexts(plJoined))
 
 using g4 = bench.group("Mixed (300 texts)")
+g4.assert = individual(mixedTexts)
 const mJoined = mixedTexts.join(SEP)
 bench("individual (processText each)", () => individual(mixedTexts))
 bench("batched (split+filter)", () => batched(mixedTexts))
