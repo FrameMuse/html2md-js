@@ -67,6 +67,27 @@ export function collapseWhitespace(s: string): string {
   return _DECODER.decode(_DST_BUF.subarray(0, destIdx))
 }
 
+export function processText(text: string): string {
+  if (!RE_WS.test(text) && !RE_ESCAPE.test(text)) return text
+  const encoded = _ENCODER.encodeInto(text, _SRC_BUF)
+  const srcLen = encoded.written
+  let di = 0
+  let prevSpace = false
+  for (let i = 0; i < srcLen; i++) {
+    const byte = _SRC_BUF[i]
+    // collapse whitespace
+    if (byte < 128 && _WS_TABLE[byte]) {
+      if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
+      continue
+    }
+    prevSpace = false
+    // escape markdown
+    if (byte < 128 && _ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
+    _DST_BUF[di++] = byte
+  }
+  return _DECODER.decode(_DST_BUF.subarray(0, di))
+}
+
 export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {
   const tag = elem.localName
   const rawCls = elem.getAttribute?.('class')

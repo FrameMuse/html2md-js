@@ -12,8 +12,6 @@ import {
 } from './options'
 import {
   admonitionType,
-  collapseWhitespace,
-  escapeMarkdown,
   extractLanguage,
   findChild,
   flushPendingInline,
@@ -23,7 +21,8 @@ import {
   hasLinkChildren,
   inlinesBlank,
   isInlineBlank,
-  matchesCodeBy
+  matchesCodeBy,
+  processText,
 } from './utils'
 
 const INLINE_CONTAINERS = new Set(['span', 'small', 'mark', 'abbr', 'cite', 'q', 'sub', 'sup', 'time'])
@@ -63,9 +62,9 @@ function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
     const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       const text = (child as TextLike).textContent ?? ''
-      const collapsed = collapseWhitespace(text)
-      if (collapsed) {
-        out.push({ type: InlineType.text, text: escapeMarkdown(collapsed) })
+      const s = processText(text)
+      if (s) {
+        out.push({ type: InlineType.text, text: s })
         added = true
       }
     } else if (child.nodeType === ELEMENT_NODE) {
@@ -269,7 +268,7 @@ function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
     const trimmed = text.trim()
     if (!trimmed) return
 
-    out.push({ type: BlockType.paragraph, text: escapeMarkdown(collapseWhitespace(text)) })
+    out.push({ type: BlockType.paragraph, text: processText(text) })
   }
   if (node.nodeType === ELEMENT_NODE) {
     convertElement(node as ElementLike, ctx, out)
@@ -481,7 +480,7 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
       const text = (child as TextLike).textContent ?? ''
       if (!text.trim()) { flushPendingInline(blocks, pending); pending = null; continue }
       if (!pending) pending = []
-      pending.push({ type: InlineType.text, text: escapeMarkdown(collapseWhitespace(text)) })
+      pending.push({ type: InlineType.text, text: processText(text) })
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (BLOCK_TAGS.has(el.localName) && el.localName !== 'li') {
