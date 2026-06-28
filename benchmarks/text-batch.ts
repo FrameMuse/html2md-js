@@ -15,23 +15,17 @@ const RE_WS = /\s/
 const RE_ESCAPE = /[\\*_`\[\]{}()#+\-\.!]/
 
 function processTexts(joined: string): string[] {
-  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined))
-    return joined.split(SEP).filter(Boolean)
+  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) return joined.split(SEP).filter(Boolean)
 
-  const { written: srcLen } = _ENCODER.encodeInto(joined, _SRC_BUF)
+  const srcLen = _ENCODER.encodeInto(joined, _SRC_BUF).written
   let di = 0
   let prevSpace = false
 
-  // Count segments to pre-allocate
-  let segCount = 1
-  for (let i = 0; i < srcLen; i++) if (_SRC_BUF[i] === 0) segCount++
-  const boundaries = new Uint16Array(segCount)
-  let bIdx = 0
-
+  const boundaries: number[] = []
   for (let i = 0; i < srcLen; i++) {
     const byte = _SRC_BUF[i]
     if (byte === 0) {
-      boundaries[bIdx++] = di
+      boundaries.push(di)
       prevSpace = false
       continue
     }
@@ -43,9 +37,10 @@ function processTexts(joined: string): string[] {
     if (byte < 128 && _ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
     _DST_BUF[di++] = byte
   }
-  boundaries[bIdx] = di
+  boundaries.push(di)
 
   const all = _DECODER.decode(_DST_BUF.subarray(0, di))
+  const segCount = boundaries.length
   const out = new Array<string>(segCount)
   let segStart = 0
   for (let i = 0; i < segCount; i++) {
