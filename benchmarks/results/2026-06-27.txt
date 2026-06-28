@@ -1,72 +1,16 @@
-$ bun benchmarks/conversion.ts && bun benchmarks/escape.ts && bun benchmarks/internal.ts
-Element input (pre-parsed DOM)
-  [016.667µs] [+1.08x]  page (0.6K)
-  [015.409µs] [fastest] page +full opts
-  [049.173µs] [+3.19x]  prereqs (24.8K)
-  [045.154µs] [+2.93x]  prereqs +full opts
-  [969.913µs] [+62.94x] figma (96.1K)
-  [870.085µs] [+56.47x] figma +full opts
-Option breakdown (figma 96.1K)
-  [758.941µs] [+1.06x]  default
-  [726.255µs] [+1.01x]  codeBy only
-  [719.362µs] [fastest] hoist only
-  [888.280µs] [+1.23x]  skip only
-Synthetic: admonitions x50
-  [251.000ns] [fastest] element
-Synthetic: 10x10 table
-  [190.000ns] [fastest] element
-Synthetic: code-by x100
-  [190.000ns] [fastest] element
-escapeMarkdown: 9 variants  (0% special chars)
-  [471.000ns] [fastest]  production (hybrid)
-  [080.386µs] [+170.67x] loop (Set.has)
-  [471.000ns] [+1.00x]   regex (.replace)
-  [982.000ns] [+2.08x]   matchAll (for..of)
-  [481.000ns] [+1.02x]   exec (while loop)
-  [011.762µs] [+24.97x]  superFast (Uint8Array+slice)
-  [014.768µs] [+31.35x]  godMode (decode buffer)
-  [006.281µs] [+13.34x]  scanBuild (encode+substring)
-  [002.394µs] [+5.08x]   execBuffer (exec+encoder)
-escapeMarkdown: 9 variants  (1% special chars)
-  [019.316µs] [+1.50x]  production (hybrid)
-  [125.876µs] [+9.78x]  loop (Set.has)
-  [018.214µs] [+1.41x]  regex (.replace)
-  [015.439µs] [+1.20x]  matchAll (for..of)
-  [012.874µs] [fastest] exec (while loop)
-  [025.407µs] [+1.97x]  superFast (Uint8Array+slice)
-  [019.106µs] [+1.48x]  godMode (decode buffer)
-  [018.865µs] [+1.47x]  scanBuild (encode+substring)
-  [037.655µs] [+2.92x]  execBuffer (exec+encoder)
-escapeMarkdown: 9 variants  (5% special chars)
-  [005.560µs] [+1.41x]  production (hybrid)
-  [028.533µs] [+7.21x]  loop (Set.has)
-  [047.799µs] [+12.08x] regex (.replace)
-  [036.253µs] [+9.16x]  matchAll (for..of)
-  [033.483µs] [+8.46x]  exec (while loop)
-  [012.173µs] [+3.08x]  superFast (Uint8Array+slice)
-  [003.957µs] [fastest] godMode (decode buffer)
-  [012.123µs] [+3.06x]  scanBuild (encode+substring)
-  [061.946µs] [+15.65x] execBuffer (exec+encoder)
-escapeMarkdown: 9 variants  (50% special chars)
-  [005.300µs] [fastest] production (hybrid)
-  [039.795µs] [+7.51x]  loop (Set.has)
-  [331.859µs] [+62.61x] regex (.replace)
-  [247.415µs] [+46.68x] matchAll (for..of)
-  [228.158µs] [+43.05x] exec (while loop)
-  [016.812µs] [+3.17x]  superFast (Uint8Array+slice)
-  [008.155µs] [+1.54x]  godMode (decode buffer)
-  [029.766µs] [+5.62x]  scanBuild (encode+substring)
-  [177.589µs] [+33.51x] execBuffer (exec+encoder)
-collapseWhitespace
-  [020.559µs] [fastest] production (buffer+encode)
-  [081.483µs] [+3.96x]  loop (for..of+ +=)
-collapseTrim
-  [034.024µs] [fastest] production (regex)
-postProcess
-  [049.624µs] [fastest] production (two replace)
-extractLanguage
-  [140.000ns] [fastest] split+find+slice
-getTextContent / getCodeText
-  [136.031µs] [fastest] getTextContent (96K doc)
-getCodeText
-  [027.742µs] [fastest] getCodeText (100 code blocks)
+Paragraph-sized (7 texts)
+  [922.000ns] [+1.20x]  individual (processText each)
+  [771.000ns] [fastest] batched (join+split)
+  [832.000ns] [+1.08x]  batched+smart (test+join+split)
+Many texts, few escapes (200 texts)
+  [129.864µs] [+2.65x]  individual (processText each)
+  [051.933µs] [+1.06x]  batched (join+split)
+  [049.082µs] [fastest] batched+smart (test+join+split)
+All plain (500 texts)
+  [141.116µs] [+1.71x]  individual (processText each)
+  [084.034µs] [+1.02x]  batched (join+split)
+  [082.685µs] [fastest] batched+smart (test+join+split)
+Mixed (300 texts)
+  [044.194µs] [+2.15x]  individual (processText each)
+  [020.589µs] [fastest] batched (join+split)
+  [021.931µs] [+1.07x]  batched+smart (test+join+split)
