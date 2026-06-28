@@ -254,7 +254,7 @@ export function extractLanguage(elem: ElementLike): string | undefined {
   return lang?.slice(9)
 }
 
-export function flushPendingInline(blocks: Block[], pending: Inline[] | null) {
+export function addPendingInline(blocks: Block[], pending: Inline[] | null) {
   if (pending && pending.length > 0) {
     blocks.push(blockParagraph(pending))
   }

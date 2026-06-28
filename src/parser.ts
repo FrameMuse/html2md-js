@@ -10,12 +10,11 @@ import {
   SkipFlags,
   TEXT_NODE,
 } from './options'
-import { _BOUNDARY_BUF } from './utils'
 import {
   admonitionType,
   extractLanguage,
   findChild,
-  flushPendingInline,
+  addPendingInline,
   getCodeText,
   getTextContent,
   hasBlockChildren,
@@ -24,7 +23,6 @@ import {
   isInlineBlank,
   matchesCodeBy,
   processText,
-  processTexts,
 } from './utils'
 
 const INLINE_CONTAINERS = new Set(['span', 'small', 'mark', 'abbr', 'cite', 'q', 'sub', 'sup', 'time'])
@@ -32,7 +30,7 @@ const INLINE_ELEMENTS = new Set(['a', 'strong', 'b', 'em', 'i', 'code', 'span', 
 
 // ---- admonition detection ----
 
-function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: Block[]): void {
+export function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: Block[]): void {
   let contentChildren: Block[] = []
   const ch = elem.children
   for (let i = 0; i < ch.length; i++) {
@@ -48,35 +46,52 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
     }
   }
   if (!contentChildren.length) return
+
   const firstP: Inline[] = [{ type: InlineType.text, text: `[!${atype}]` }]
   const blocks: Block[] = [{ type: BlockType.paragraph, content: firstP }, ...contentChildren]
   out.push({ type: BlockType.blockquote, children: blocks })
 }
 
-function flushTextBatchSlots(ctx: Context): void {
+export function flushTextBatchSlots(ctx: Context): void {
   const slots = ctx.textBatchSlots
   if (!slots.length) return
-  const joined = slots.map(s => s.raw).join('\x00')
-  const { decoded, bOffset } = processTexts(joined)
-  let segStart = 0
-  for (let i = 0; i < bOffset; i++) {
-    const segEnd = _BOUNDARY_BUF[i]
-    if (segEnd > segStart) {
-      const s = slots[i]
-      const text = decoded.substring(segStart, segEnd)
-      if (s.t === 'i') s.out[s.idx] = { type: InlineType.text, text }
-      else s.out[s.idx].text = text
-    }
-    segStart = segEnd
+  const raw = ctx.textBatchRaw
+  let joined = ''
+  for (let i = 0; i < raw.length; i++) {
+    if (i > 0) joined += '\x00'
+    joined += raw[i]
   }
-  ctx.textBatchSlots = []
+  raw.length = 0
+
+  const processed = processText(joined)
+  let start = 0
+  for (let i = 0; i < slots.length; i++) {
+    const idx = processed.indexOf('\x00', start)
+    if (idx === -1) {
+      if (start < processed.length) {
+        const s = slots[i]
+        const text = processed.slice(start)
+        if (s.t === 'i') (s.out as Inline[])[s.idx] = { type: InlineType.text, text }
+        else (s.out as Block[])[s.idx].text = text
+      }
+      break
+    }
+    if (idx > start) {
+      const s = slots[i]
+      const text = processed.slice(start, idx)
+      if (s.t === 'i') (s.out as Inline[])[s.idx] = { type: InlineType.text, text }
+      else (s.out as Block[])[s.idx].text = text
+    }
+    start = idx + 1
+  }
+  slots.length = 0
 }
 
 // ---- inline conversion ----
 // All inline functions return true when any content was pushed to `out`.
 // Wrapper elements (strong/em/a) check inner content for non-blank before pushing.
 
-function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
+export function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
   let added = false
   const cn = node.childNodes
   for (let i = 0; i < cn.length; i++) {
@@ -84,12 +99,12 @@ function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
     if (child.nodeType === TEXT_NODE) {
       const text = child.textContent ?? ''
       if (text) {
-        ctx.textBatchSlots.push({ t: 'i', out, idx: out.length, raw: text })
+        ctx.textBatchRaw.push(text)
+        ctx.textBatchSlots.push({ t: 'i', out, idx: out.length })
         out.push(null as any)
         added = true
       }
     } else if (child.nodeType === ELEMENT_NODE) {
-      // flushTextBatchSlots(ctx)
       if (convertInline(child as ElementLike, ctx, out)) added = true
     }
   }
@@ -128,7 +143,7 @@ function collectInlinesWithCodeSplit(node: NodeLike, ctx: Context, out: Inline[]
   flush()
 }
 
-function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean {
+export function convertInline(elem: ElementLike, ctx: Context, out: Inline[]): boolean {
   const tag = elem.localName
 
   if ((ctx.options.skip & SkipFlags.ARIA_HIDDEN) && elem.getAttribute?.('aria-hidden') === 'true') return false
@@ -285,14 +300,15 @@ function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Contex
 
 
 
-function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
+export function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
   switch (node.nodeType) {
     case TEXT_NODE: {
       const text = node.textContent
       if (!text) return
       const trimmed = text.trim()
       if (!trimmed) return
-      ctx.textBatchSlots.push({ t: 'b', out, idx: out.length, raw: text })
+      ctx.textBatchRaw.push(text)
+      ctx.textBatchSlots.push({ t: 'b', out, idx: out.length })
       out.push({ type: BlockType.paragraph, text: '' })
       return
     }
@@ -301,7 +317,7 @@ function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
   }
 }
 
-function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
+export function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   const tag = elem.localName
 
   if (SKIP_TAGS.has(tag)) return
@@ -445,7 +461,7 @@ function convertElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   convertChildren(elem, ctx, out)
 }
 
-function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): void {
+export function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): void {
   const tag = elem.localName
   const inlines: Inline[] = []
   collectInlinesWithCodeSplit(elem, ctx, inlines)
@@ -466,7 +482,7 @@ function convertCodeByElement(elem: ElementLike, ctx: Context, out: Block[]): vo
   }
 }
 
-function convertChildren(elem: ElementLike, ctx: Context, out: Block[]): void {
+export function convertChildren(elem: ElementLike, ctx: Context, out: Block[]): void {
   const cn = elem.childNodes
   for (let i = 0; i < cn.length; i++) {
     convertNode(cn[i], ctx, out)
@@ -505,17 +521,18 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
     if (child.nodeType === TEXT_NODE) {
       const text = child.textContent ?? ''
       if (!text.trim()) {
-        flushPendingInline(blocks, pending);
+        addPendingInline(blocks, pending);
         pending = null;
         continue
       }
       if (!pending) pending = []
-      ctx.textBatchSlots.push({ t: 'i', out: pending, idx: pending.length, raw: text })
+      ctx.textBatchRaw.push(text)
+      ctx.textBatchSlots.push({ t: 'i', out: pending, idx: pending.length })
       pending.push(null as any)
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (BLOCK_TAGS.has(el.localName) && el.localName !== 'li') {
-        flushPendingInline(blocks, pending)
+        addPendingInline(blocks, pending)
         pending = null
         convertElement(el, ctx, blocks)
       } else {
@@ -526,11 +543,11 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
         }
       }
     } else {
-      flushPendingInline(blocks, pending)
+      addPendingInline(blocks, pending)
       pending = null
     }
   }
-  flushPendingInline(blocks, pending)
+  addPendingInline(blocks, pending)
   return blocks
 }
 
@@ -546,7 +563,7 @@ function hasBlockChildrenExceptLi(elem: ElementLike): boolean {
 
 // ---- tables ----
 
-function convertTable(elem: ElementLike, ctx: Context, out: Block[]): void {
+export function convertTable(elem: ElementLike, ctx: Context, out: Block[]): void {
   const headers: Inline[][] = []
   const rows: Inline[][][] = []
 
@@ -604,5 +621,3 @@ function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: 
     rows.push(row)
   }
 }
-
-export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable, flushTextBatchSlots }

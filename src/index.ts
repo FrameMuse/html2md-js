@@ -36,13 +36,14 @@ export class HtmlToMd {
       skip: options?.skip ?? 0,
       hoisted: new HoistedMap(),
     }
-    this.ctx = { options: this.opts, inList: false, textBatchSlots: [] }
+    this.ctx = { options: this.opts, inList: false, textBatchSlots: [], textBatchRaw: [] }
   }
 
   convert(input: ElementLike): string {
     this.opts.hoisted = new HoistedMap()
     this.ctx.inList = false
     this.ctx.textBatchSlots = []
+    this.ctx.textBatchRaw = []
     const blocks: Block[] = []
     convertChildren(input, this.ctx, blocks)
     flushTextBatchSlots(this.ctx)

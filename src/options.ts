@@ -140,14 +140,17 @@ export interface Inline {
   alt?: string
 }
 
-export type TextBatchSlot =
-  | { t: 'i'; out: Inline[]; idx: number; raw: string }
-  | { t: 'b'; out: Block[]; idx: number; raw: string }
+export interface TextBatchSlot {
+  t: 'i' | 'b'
+  out: Inline[] | Block[]
+  idx: number
+}
 
 export interface Context {
   options: ResolvedOptions
   inList: boolean
   textBatchSlots: TextBatchSlot[]
+  textBatchRaw: string[]
 }
 
 export const ELEMENT_NODE = 1
