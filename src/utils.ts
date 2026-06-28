@@ -88,18 +88,29 @@ export function processText(text: string): string {
   return _DECODER.decode(_DST_BUF.subarray(0, di))
 }
 
-const _BOUNDARY_BUF = new Uint32Array(10000)
+export const _BOUNDARY_BUF = new Uint32Array(10000)
 
-export function processTexts(joined: string): string[] {
-  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) return joined.split('\x00')
+export interface ProcessedTexts {
+  decoded: string
+  bOffset: number
+}
+
+export function processTexts(joined: string): ProcessedTexts {
+  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) {
+    let bi = 0
+    for (let i = 0; i < joined.length; i++) {
+      if (joined[i] === '\x00') _BOUNDARY_BUF[bi++] = i
+    }
+    _BOUNDARY_BUF[bi++] = joined.length
+    return { decoded: joined, bOffset: bi }
+  }
 
   const srcLen = _ENCODER.encodeInto(joined, _SRC_BUF).written
   let di = 0
   let prevSpace = false
   let bOffset = 0
-  let byte = 0
   for (let i = 0; i < srcLen; i++) {
-    byte = _SRC_BUF[i]
+    const byte = _SRC_BUF[i]
     if (byte === 0) {
       _BOUNDARY_BUF[bOffset++] = di
       prevSpace = false
@@ -117,15 +128,7 @@ export function processTexts(joined: string): string[] {
   }
   _BOUNDARY_BUF[bOffset++] = di
 
-  const all = _DECODER.decode(_DST_BUF.subarray(0, di))
-  const out = new Array<string>(bOffset)
-  let segStart = 0
-  for (let i = 0; i < bOffset; i++) {
-    const segEnd = _BOUNDARY_BUF[i]
-    if (segEnd > segStart) out[i] = all.substring(segStart, segEnd)
-    segStart = segEnd
-  }
-  return out
+  return { decoded: _DECODER.decode(_DST_BUF.subarray(0, di)), bOffset }
 }
 
 export function matchesCodeBy(elem: ElementLike, rules: CodeByRule[]): boolean {

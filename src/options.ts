@@ -140,9 +140,16 @@ export interface Inline {
   alt?: string
 }
 
+export interface TextSlot {
+  out: Inline[]
+  idx: number
+  raw: string
+}
+
 export interface Context {
   options: ResolvedOptions
   inList: boolean
+  textSlots: TextSlot[]
 }
 
 export const ELEMENT_NODE = 1

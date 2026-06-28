@@ -10,6 +10,7 @@ import {
   SkipFlags,
   TEXT_NODE,
 } from './options'
+import { _BOUNDARY_BUF } from './utils'
 import {
   admonitionType,
   extractLanguage,
@@ -52,6 +53,22 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
   out.push({ type: BlockType.blockquote, children: blocks })
 }
 
+function flushTextSlots(ctx: Context): void {
+  const slots = ctx.textSlots
+  if (!slots.length) return
+  const joined = slots.map(s => s.raw).join('\x00')
+  const { decoded, bOffset } = processTexts(joined)
+  let segStart = 0
+  for (let i = 0; i < bOffset; i++) {
+    const segEnd = _BOUNDARY_BUF[i]
+    if (segEnd > segStart) {
+      slots[i].out[slots[i].idx] = { type: InlineType.text, text: decoded.substring(segStart, segEnd) }
+    }
+    segStart = segEnd
+  }
+  slots.length = 0
+}
+
 // ---- inline conversion ----
 // All inline functions return true when any content was pushed to `out`.
 // Wrapper elements (strong/em/a) check inner content for non-blank before pushing.
@@ -59,33 +76,21 @@ function convertAdmonition(elem: ElementLike, atype: string, ctx: Context, out: 
 function collectInlines(node: NodeLike, ctx: Context, out: Inline[]): boolean {
   let added = false
   const cn = node.childNodes
-  const texts: string[] = []
-  const indices: number[] = []
-  function flush() {
-    if (!texts.length) return
-    const processed = processTexts(texts.join('\x00'))
-    for (let j = 0; j < processed.length; j++) {
-      if (processed[j]) out[indices[j]] = { type: InlineType.text, text: processed[j] }
-    }
-    texts.length = 0
-    indices.length = 0
-  }
   for (let i = 0; i < cn.length; i++) {
     const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       const text = (child as TextLike).textContent ?? ''
       if (text) {
-        texts.push(text)
-        indices.push(out.length)
+        ctx.textSlots.push({ out, idx: out.length, raw: text })
         out.push(null as any)
         added = true
       }
     } else if (child.nodeType === ELEMENT_NODE) {
-      flush()
+      flushTextSlots(ctx)
       if (convertInline(child as ElementLike, ctx, out)) added = true
     }
   }
-  flush()
+  flushTextSlots(ctx)
   return added
 }
 
@@ -277,7 +282,7 @@ function collectOrderedListInlines(elem: ElementLike, start: number, ctx: Contex
 
 function convertNode(node: NodeLike, ctx: Context, out: Block[]): void {
   if (node.nodeType === TEXT_NODE) {
-    const text = node .textContent
+    const text = node.textContent
     if (!text) return
 
     const trimmed = text.trim()
@@ -493,12 +498,14 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
     const child = cn[i]
     if (child.nodeType === TEXT_NODE) {
       const text = (child as TextLike).textContent ?? ''
-      if (!text.trim()) { flushPendingInline(blocks, pending); pending = null; continue }
+      if (!text.trim()) { flushTextSlots(ctx); flushPendingInline(blocks, pending); pending = null; continue }
       if (!pending) pending = []
-      pending.push({ type: InlineType.text, text: processText(text) })
+      ctx.textSlots.push({ out: pending, idx: pending.length, raw: text })
+      pending.push(null as any)
     } else if (child.nodeType === ELEMENT_NODE) {
       const el = child as ElementLike
       if (BLOCK_TAGS.has(el.localName) && el.localName !== 'li') {
+        flushTextSlots(ctx)
         flushPendingInline(blocks, pending)
         pending = null
         convertElement(el, ctx, blocks)
@@ -510,10 +517,12 @@ function collectContentWithInlineMerge(elem: ElementLike, ctx: Context): Block[]
         }
       }
     } else {
+      flushTextSlots(ctx)
       flushPendingInline(blocks, pending)
       pending = null
     }
   }
+  flushTextSlots(ctx)
   flushPendingInline(blocks, pending)
   return blocks
 }
@@ -589,4 +598,4 @@ function readRow(tr: ElementLike, headers: Inline[][], rows: Inline[][][], ctx: 
   }
 }
 
-export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable }
+export { collectInlines, convertAdmonition, convertChildren, convertCodeByElement, convertElement, convertInline, convertNode, convertTable, flushTextSlots }

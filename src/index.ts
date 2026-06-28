@@ -5,6 +5,7 @@ import {
 } from './options'
 import {
   convertChildren,
+  flushTextSlots,
 } from './parser'
 import {
   serializeBlocks,
@@ -35,14 +36,16 @@ export class HtmlToMd {
       skip: options?.skip ?? 0,
       hoisted: new HoistedMap(),
     }
-    this.ctx = { options: this.opts, inList: false }
+    this.ctx = { options: this.opts, inList: false, textSlots: [] }
   }
 
   convert(input: ElementLike): string {
     this.opts.hoisted = new HoistedMap()
     this.ctx.inList = false
+    this.ctx.textSlots.length = 0
     const blocks: Block[] = []
     convertChildren(input, this.ctx, blocks)
+    flushTextSlots(this.ctx)
     let result = serializeBlocks(blocks, this.opts, 0)
     result = collapseTrim(result)
     result = postProcess(result)
