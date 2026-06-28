@@ -11,7 +11,38 @@ const _SRC_BUF = new Uint8Array(65536)
 const _DST_BUF = new Uint8Array(65536 * 2)
 
 const SEP = "\x00"
-const SEP_BYTE = 0
+const RE_WS = /\s/
+const RE_ESCAPE = /[\\*_`\[\]{}()#+\-\.!]/
+
+function processTexts(joined: string): string[] {
+  if (!RE_WS.test(joined) && !RE_ESCAPE.test(joined)) return joined.split(SEP).filter(Boolean)
+
+  const encoded = _ENCODER.encodeInto(joined, _SRC_BUF)
+  const srcLen = encoded.written
+  let di = 0
+  let segStart = 0
+  let prevSpace = false
+  const out: string[] = []
+
+  for (let i = 0; i < srcLen; i++) {
+    const byte = _SRC_BUF[i]
+    if (byte === 0) {
+      if (di > segStart) out.push(_DECODER.decode(_DST_BUF.subarray(segStart, di)))
+      segStart = di
+      prevSpace = false
+      continue
+    }
+    if (byte < 128 && _WS_TABLE[byte]) {
+      if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
+      continue
+    }
+    prevSpace = false
+    if (byte < 128 && _ESCAPE_TABLE[byte]) _DST_BUF[di++] = 92
+    _DST_BUF[di++] = byte
+  }
+  if (di > segStart) out.push(_DECODER.decode(_DST_BUF.subarray(segStart, di)))
+  return out
+}
 
 function individual(texts: string[]): string[] {
   const out: string[] = []
@@ -41,53 +72,6 @@ function batchedManual(texts: string[]): string[] {
     }
     if (idx > start) result.push(processed.slice(start, idx))
     start = idx + 1
-  }
-  return result
-}
-
-function processTexts(texts: string[]): string[] {
-  const out: string[] = []
-  let srcLen = 0
-  for (let t = 0; t < texts.length; t++) {
-    if (t > 0) _SRC_BUF[srcLen++] = SEP_BYTE
-    const r = _ENCODER.encodeInto(texts[t], _SRC_BUF.subarray(srcLen))
-    srcLen += r.written
-  }
-  if (!srcLen) return out
-
-  let di = 0
-  let segStart = 0
-  let prevSpace = false
-  for (let i = 0; i < srcLen; i++) {
-    const b = _SRC_BUF[i]
-    if (b === SEP_BYTE) {
-      if (di > segStart) out.push(_DECODER.decode(_DST_BUF.subarray(segStart, di)))
-      segStart = di
-      prevSpace = false
-      continue
-    }
-    if (b < 128 && _WS_TABLE[b]) {
-      if (!prevSpace) { _DST_BUF[di++] = 32; prevSpace = true }
-      continue
-    }
-    prevSpace = false
-    if (b < 128 && _ESCAPE_TABLE[b]) _DST_BUF[di++] = 92
-    _DST_BUF[di++] = b
-  }
-  if (di > segStart) out.push(_DECODER.decode(_DST_BUF.subarray(segStart, di)))
-  return out
-}
-
-function batchedFused(texts: string[]): string[] {
-  const joined = texts.join(SEP)
-  const processed = processText(joined)
-  const result: string[] = []
-  let start = 0
-  for (let i = 0; i <= processed.length; i++) {
-    if (i === processed.length || processed[i] === SEP) {
-      if (i > start) result.push(processed.slice(start, i))
-      start = i + 1
-    }
   }
   return result
 }
@@ -126,29 +110,29 @@ for (let i = 0; i < 100; i++) {
 // ---- benchmarks ----
 
 using g1 = bench.group("Paragraph-sized (7 texts)")
+const pJoined = paragraphTexts.join(SEP)
 bench("individual (processText each)", () => individual(paragraphTexts))
 bench("batched (split+filter)", () => batched(paragraphTexts))
 bench("batched (indexOf+slice)", () => batchedManual(paragraphTexts))
-bench("batched+fused (walk+push)", () => batchedFused(paragraphTexts))
-bench("processTexts (byte-level)", () => processTexts(paragraphTexts))
+bench("processTexts (byte-level)", () => processTexts(pJoined))
 
 using g2 = bench.group("Many texts, few escapes (200 texts)")
+const dJoined = docTexts.join(SEP)
 bench("individual (processText each)", () => individual(docTexts))
 bench("batched (split+filter)", () => batched(docTexts))
 bench("batched (indexOf+slice)", () => batchedManual(docTexts))
-bench("batched+fused (walk+push)", () => batchedFused(docTexts))
-bench("processTexts (byte-level)", () => processTexts(docTexts))
+bench("processTexts (byte-level)", () => processTexts(dJoined))
 
 using g3 = bench.group("All plain (500 texts)")
+const plJoined = plainTexts.join(SEP)
 bench("individual (processText each)", () => individual(plainTexts))
 bench("batched (split+filter)", () => batched(plainTexts))
 bench("batched (indexOf+slice)", () => batchedManual(plainTexts))
-bench("batched+fused (walk+push)", () => batchedFused(plainTexts))
-bench("processTexts (byte-level)", () => processTexts(plainTexts))
+bench("processTexts (byte-level)", () => processTexts(plJoined))
 
 using g4 = bench.group("Mixed (300 texts)")
+const mJoined = mixedTexts.join(SEP)
 bench("individual (processText each)", () => individual(mixedTexts))
 bench("batched (split+filter)", () => batched(mixedTexts))
 bench("batched (indexOf+slice)", () => batchedManual(mixedTexts))
-bench("batched+fused (walk+push)", () => batchedFused(mixedTexts))
-bench("processTexts (byte-level)", () => processTexts(mixedTexts))
+bench("processTexts (byte-level)", () => processTexts(mJoined))
